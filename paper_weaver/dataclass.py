@@ -5,7 +5,7 @@ from typing import Tuple
 
 @dataclass
 class Paper:
-    identifiers: dict[str, str]  # example: {"doi": "10.1000/xyz123"}
+    identifiers: list[str]  # example: ["doi:10.1000/xyz123"]
 
     async def get_info(self, src: "DataSrc") -> Tuple["Paper", dict]:
         return await src.get_paper_info(self)
@@ -25,7 +25,7 @@ class Paper:
 
 @dataclass
 class Author:
-    identifiers: dict[str, str]  # example: {"orcid": "0000-0001-2345-6789"}
+    identifiers: list[str]  # example: ["orcid:0000-0001-2345-6789"]
 
     async def get_info(self, src: "DataSrc") -> Tuple["Author", dict]:
         return await src.get_author_info(self)
@@ -36,7 +36,7 @@ class Author:
 
 @dataclass
 class Venue:
-    identifiers: dict[str, str]  # example: {"issn": "1234-5678"}
+    identifiers: list[str]  # example: ["issn:1234-5678"]
 
     async def get_info(self, src: "DataSrc") -> Tuple["Venue", dict]:
         return await src.get_venue_info(self)
