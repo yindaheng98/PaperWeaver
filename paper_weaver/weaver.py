@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 import asyncio
 import logging
 from typing import AsyncIterator, Tuple
-from .dataclass import Paper, Author, Venue, DataSrc, DataDst
+from .dataclass import Paper, Author, DataSrc, DataDst
 
 
 class AuthorWeaverCache(metaclass=ABCMeta):
@@ -12,14 +12,46 @@ class AuthorWeaverCache(metaclass=ABCMeta):
 
     async def get_author_info(self, author: Author) -> Tuple[Author, dict | None]:
         identifiers, info = await self.find_author_info_and_identifiers_by_identifiers(author.identifiers)
-        return Author(identifiers=identifiers.union(author.identifiers)), info
+        return Author(identifiers=identifiers.union(author.identifiers)), info  # merge identifiers
 
     @abstractmethod
     async def set_author_info(self, author: Author, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
+    async def find_paper_info_and_identifiers_by_identifiers(self, identifiers: set[str]) -> Tuple[set[str], dict | None]:
+        raise NotImplementedError
+
+    async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict | None]:
+        identifiers, info = await self.find_paper_info_and_identifiers_by_identifiers(paper.identifiers)
+        return Paper(identifiers=identifiers.union(paper.identifiers)), info  # merge identifiers
+
+    @abstractmethod
+    async def set_paper_info(self, paper: Paper, info: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_authors_by_paper(self, paper: Paper) -> list[Author]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_papers_by_author(self, author: Author) -> list[Paper]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def iterate_authors(self) -> AsyncIterator[Author, None]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def iterate_papers(self) -> AsyncIterator[Paper, None]:
         raise NotImplementedError
 
 
@@ -31,31 +63,36 @@ class AuthorWeaver:
         self.dst = dst
         self.cache = cache
 
-    async def _load_author_info(self, author: Author) -> bool:
+    async def _load_author_info_and_papers(self, author: Author) -> bool:
         author, info = await author.get_info(self.src)
         if info is None:
             return False
         await self.cache.set_author_info(author, info)
+        await self.dst.save_author_info(author, info)
         return True
 
-    async def _init_authors_info(self, author: Author) -> bool:
-        # init author info for those identifiers without info
-        tasks = []
-        async for author in self.cache.iterate_authors():
-            if await self.cache.get_author_info(author) is None:
-                tasks.append(self._load_author_info(author))
-        self.logger.info("Initializing %d authors " % len(tasks))
-        success = await asyncio.gather(*tasks)
-        succ_count = sum([1 for s in success if s])
-        fail_count = sum([1 for s in success if not s])
-        return succ_count, fail_count
+    async def _load_paper_info_and_authors(self, paper: Paper) -> bool:
+        paper, info = await paper.get_info(self.src)
+        if info is None:
+            return False
+        await self.cache.set_paper_info(paper, info)
+        await self.dst.save_paper_info(paper, info)
+        return True
 
     async def bfs_once(self):
-        total_author_succ_count, total_author_fail_count = 0, 0
+        self.logger.info("Fetching authors from paper ...")
+        tasks = []
+        async for author in self.cache.iterate_authors():
+            papers = await self.cache.get_papers_by_author(author)
+            if len(papers) == 0:
+                continue
+            for paper in papers:
+                tasks.append(self._load_paper_info_and_authors(paper))
 
-        # init author info for those identifiers but no info (failed in last loop)
-        self.logger.info("Initializing authors failed in last loop")
-        succ_count, fail_count = await self._init_authors_info()
-        self.logger.info("%d authors failed in last loop initialized, %d still fetch failed" % (succ_count, fail_count))
-        total_author_succ_count += succ_count
-        total_author_fail_count += fail_count
+        self.logger.info("Fetching papers from author ...")
+        async for paper in self.cache.iterate_papers():
+            authors = await self.cache.get_authors_by_paper(paper)
+            if len(authors) == 0:
+                continue
+            for author in authors:
+                tasks.append(self._load_author_info_and_papers(author))
