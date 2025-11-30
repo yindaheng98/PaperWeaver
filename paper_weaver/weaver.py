@@ -57,6 +57,43 @@ class AuthorWeaver:
         self.dst = dst
         self.cache = cache
 
+    async def _process_author_with_papers(self, author: Author) -> int:
+        """Process one author: fetch info and papers, write to cache and dst"""
+        n_new_papers = 0
+        # Step 1: Fetch and save author info
+        author, author_info = await self.cache.get_author_info(author)  # fetch from cache
+        if author_info is None:  # not in cache
+            author, author_info = await author.get_info(self.src)  # fetch from source
+            if author_info is None:  # failed to fetch
+                return n_new_papers  # no new author, no new papers
+            # Write author info if fetched
+            await self.dst.save_author_info(author, author_info)
+            await self.cache.set_author_info(author, author_info)
+
+        # Step 2: Fetch and save papers of this author
+        papers = await self.cache.get_papers_by_author(author)  # fetch from cache
+        if papers is None:  # not in cache
+            papers = await author.get_papers(self.src)  # fetch from source
+            if papers is None:  # failed to fetch
+                return n_new_papers  # no new papers
+            # Write papers if fetched
+            await self.cache.set_papers_of_author(author, papers)
+
+        # Step 3: Fetch and save info for all papers of this author
+        for paper in papers:
+            paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
+            if paper_info is None:  # not in cache
+                paper, paper_info = await paper.get_info(self.src)  # fetch from source
+                if paper_info is None:  # failed to fetch
+                    continue  # no new paper
+                # Write paper info if fetched
+                await self.dst.save_paper_info(paper, paper_info)
+                await self.cache.set_paper_info(paper, paper_info)
+                n_new_papers += 1
+            await self.dst.link_author(paper, author)
+
+        return n_new_papers
+
     async def _fetch_author_info(self, author: Author) -> Author | None:
         author, info = await self.cache.get_author_info(author)  # try cache first
         if info is None:  # not in cache
