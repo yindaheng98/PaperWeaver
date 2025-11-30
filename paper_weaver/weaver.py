@@ -80,19 +80,24 @@ class AuthorWeaver:
         return True
 
     async def bfs_once(self):
-        self.logger.info("Fetching authors from paper ...")
         tasks = []
         async for author in self.cache.iterate_authors():
-            papers = await self.cache.get_papers_by_author(author)
-            if len(papers) == 0:
-                continue
-            for paper in papers:
-                tasks.append(self._load_paper_info_and_authors(paper))
+            if len(await self.cache.get_papers_by_author(author)) > 0:
+                continue  # there are already papers in cache, means this author has been processed, skip
+            tasks.append(self._load_author_info_and_papers(author))
+        self.logger.info(f"Fetching papers from {len(tasks)} authors")
+        success = await asyncio.gather(*tasks)
+        succ_count = sum([1 for s in success if s])
+        fail_count = sum([1 for s in success if not s])
+        self.logger.info(f"Fetched papers from {len(tasks)} authors: {succ_count} succeeded, {fail_count} failed")
 
-        self.logger.info("Fetching papers from author ...")
+        tasks = []
         async for paper in self.cache.iterate_papers():
-            authors = await self.cache.get_authors_by_paper(paper)
-            if len(authors) == 0:
-                continue
-            for author in authors:
-                tasks.append(self._load_author_info_and_papers(author))
+            if len(await self.cache.get_authors_by_paper(paper)) > 0:
+                continue  # there are already authors in cache, means this paper has been processed, skip
+            tasks.append(self._load_paper_info_and_authors(paper))
+        self.logger.info(f"Fetching authors from {len(tasks)} papers")
+        success = await asyncio.gather(*tasks)
+        succ_count = sum([1 for s in success if s])
+        fail_count = sum([1 for s in success if not s])
+        self.logger.info(f"Fetched authors from {len(tasks)} papers: {succ_count} succeeded, {fail_count} failed")
