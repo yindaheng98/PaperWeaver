@@ -7,24 +7,18 @@ from .dataclass import Paper, Author, DataSrc, DataDst
 
 class AuthorWeaverCache(metaclass=ABCMeta):
     @abstractmethod
-    async def find_author_info_and_identifiers_by_identifiers(self, identifiers: set[str]) -> Tuple[set[str], dict | None]:
-        raise NotImplementedError
-
     async def get_author_info(self, author: Author) -> Tuple[Author, dict | None]:
-        identifiers, info = await self.find_author_info_and_identifiers_by_identifiers(author.identifiers)
-        return Author(identifiers=identifiers.union(author.identifiers)), info  # merge identifiers
+        """return (updated author, info or None if not in cache)"""
+        raise NotImplementedError
 
     @abstractmethod
     async def set_author_info(self, author: Author, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def find_paper_info_and_identifiers_by_identifiers(self, identifiers: set[str]) -> Tuple[set[str], dict | None]:
-        raise NotImplementedError
-
     async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict | None]:
-        identifiers, info = await self.find_paper_info_and_identifiers_by_identifiers(paper.identifiers)
-        return Paper(identifiers=identifiers.union(paper.identifiers)), info  # merge identifiers
+        """return (updated paper, info or None if not in cache)"""
+        raise NotImplementedError
 
     @abstractmethod
     async def set_paper_info(self, paper: Paper, info: dict) -> None:
@@ -125,19 +119,19 @@ class AuthorWeaver:
         tasks = []
         async for author in self.cache.iterate_authors():
             tasks.append(self._fetch_author_info_and_papers(author))
-        self.logger.info(f"Fetching papers from {len(tasks)} authors")
+        self.logger.info(f"Fetching papers from {len(tasks)} new authors")
         success = await asyncio.gather(*tasks)
         succ_count = sum([1 for s in success if s > 0])
         fail_count = sum([1 for s in success if s <= 0])
         fetched_count = sum(success)
-        self.logger.info(f"Fetched {fetched_count} new papers from {succ_count} authors. {fail_count} authors do not have new papers.")
+        self.logger.info(f"Found {fetched_count} papers from {succ_count} authors. {fail_count} authors do not have new papers.")
 
         tasks = []
         async for paper in self.cache.iterate_papers():
             tasks.append(self._fetch_paper_info_and_authors(paper))
-        self.logger.info(f"Fetching authors from {len(tasks)} papers")
+        self.logger.info(f"Fetching authors from {len(tasks)} new papers")
         success = await asyncio.gather(*tasks)
         succ_count = sum([1 for s in success if s > 0])
         fail_count = sum([1 for s in success if s <= 0])
         fetched_count = sum(success)
-        self.logger.info(f"Fetched {fetched_count} new authors from {succ_count} papers. {fail_count} papers do not have new authors.")
+        self.logger.info(f"Found {fetched_count} authors from {succ_count} papers. {fail_count} papers do not have new authors.")
