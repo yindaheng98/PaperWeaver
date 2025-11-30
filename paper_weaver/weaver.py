@@ -74,18 +74,22 @@ class AuthorWeaver:
             await self.cache.set_author_info(author, info)
         return author
 
+    async def _fetch_papers_of_author(self, author: Author) -> list[Paper]:
+        papers = await self.cache.get_papers_by_author(author)  # try cache first
+        if len(papers) == 0:  # not in cache
+            papers = await author.get_papers(self.src)  # fetch from source
+            if len(papers) == 0:  # failed to fetch
+                return []  # skip
+            # save to cache and dst
+            await self.cache.set_papers_of_author(author, papers)
+        return papers
+
     async def _fetch_author_info_and_papers(self, author: Author) -> int:
         author = await self._fetch_author_info(author)
         if author is None:
             return 0  # skip
 
-        papers = await self.cache.get_papers_by_author(author)  # try cache first
-        if len(papers) == 0:  # not in cache
-            papers = await author.get_papers(self.src)  # fetch from source
-            if len(papers) == 0:  # failed to fetch
-                return 0  # skip
-            # save to cache and dst
-            await self.cache.set_papers_of_author(author, papers)
+        papers = await self._fetch_papers_of_author(author)
         return len(papers)
 
     async def _fetch_paper_info(self, paper: Paper) -> Paper | None:
@@ -99,18 +103,22 @@ class AuthorWeaver:
             await self.cache.set_paper_info(paper, info)
         return paper
 
+    async def _fetch_authors_of_paper(self, paper: Paper) -> list[Author]:
+        authors = await self.cache.get_authors_by_paper(paper)  # try cache first
+        if len(authors) == 0:  # not in cache
+            authors = await paper.get_authors(self.src)  # fetch from source
+            if len(authors) == 0:  # failed to fetch
+                return []  # skip
+            # save to cache and dst
+            await self.cache.set_authors_of_paper(paper, authors)
+        return authors
+
     async def _fetch_paper_info_and_authors(self, paper: Paper) -> int:
         paper = await self._fetch_paper_info(paper)
         if paper is None:
             return 0  # skip
 
-        authors = await self.cache.get_authors_by_paper(paper)  # try cache first
-        if len(authors) == 0:  # not in cache
-            authors = await paper.get_authors(self.src)  # fetch from source
-            if len(authors) == 0:  # failed to fetch
-                return 0  # skip
-            # save to cache and dst
-            await self.cache.set_authors_of_paper(paper, authors)
+        authors = await self._fetch_authors_of_paper(paper)
         return len(authors)
 
     async def bfs_once(self):
