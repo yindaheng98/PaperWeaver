@@ -4,9 +4,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Paper:
-    id: str
-    title: str
     identifiers: dict[str, str]  # example: {"doi": "10.1000/xyz123"}
+    title: str
 
     async def get_authors(self, src: "DataSrc") -> list["Author"]:
         return await src.get_authors_by_paper(self)
@@ -23,9 +22,8 @@ class Paper:
 
 @dataclass
 class Author:
-    id: str
-    name: str
     identifiers: dict[str, str]  # example: {"orcid": "0000-0001-2345-6789"}
+    name: str
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
         return await src.get_papers_by_author(self)
@@ -33,9 +31,8 @@ class Author:
 
 @dataclass
 class Venue:
-    id: str
-    name: str
     identifiers: dict[str, str]  # example: {"issn": "1234-5678"}
+    name: str
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
         return await src.get_papers_by_venue(self)
