@@ -129,5 +129,23 @@ class DataDst(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    async def link_paper_to_author(self, author: Author, paper: Paper) -> None:
+        raise NotImplementedError
+
+    async def link_papers_to_author(self, author: Author, papers: list[Paper]) -> None:
+        """Overwrite batch link papers for better performance."""
+        for paper in papers:
+            await self.link_paper_to_author(author, paper)
+
+    @abstractmethod
     async def save_venue_info(self, venue: Venue, info: dict) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    async def link_paper_to_venue(self, venue: Venue, paper: Paper) -> None:
+        raise NotImplementedError
+
+    async def link_papers_to_venue(self, venue: Venue, papers: list[Paper]) -> None:
+        """Overwrite batch link papers for better performance."""
+        for paper in papers:
+            await self.link_paper_to_venue(venue, paper)
