@@ -6,7 +6,7 @@ from dataclasses import dataclass
 class Paper:
     identifiers: dict[str, str]  # example: {"doi": "10.1000/xyz123"}
 
-    async def get_info(self, src: "DataSrc") -> any:
+    async def get_info(self, src: "DataSrc") -> dict:
         return await src.get_paper_info(self)
 
     async def get_authors(self, src: "DataSrc") -> list["Author"]:
@@ -26,7 +26,7 @@ class Paper:
 class Author:
     identifiers: dict[str, str]  # example: {"orcid": "0000-0001-2345-6789"}
 
-    async def get_info(self, src: "DataSrc") -> any:
+    async def get_info(self, src: "DataSrc") -> dict:
         return await src.get_author_info(self)
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
@@ -37,7 +37,7 @@ class Author:
 class Venue:
     identifiers: dict[str, str]  # example: {"issn": "1234-5678"}
 
-    async def get_info(self, src: "DataSrc") -> any:
+    async def get_info(self, src: "DataSrc") -> dict:
         return await src.get_venue_info(self)
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
@@ -46,7 +46,7 @@ class Venue:
 
 class DataSrc(metaclass=ABCMeta):
     @abstractmethod
-    async def get_paper_info(self, paper: Paper) -> any:
+    async def get_paper_info(self, paper: Paper) -> dict:
         raise NotImplementedError
 
     @abstractmethod
@@ -66,7 +66,7 @@ class DataSrc(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_author_info(self, author: Author) -> any:
+    async def get_author_info(self, author: Author) -> dict:
         raise NotImplementedError
 
     @abstractmethod
@@ -74,7 +74,7 @@ class DataSrc(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_venue_info(self, venue: Venue) -> any:
+    async def get_venue_info(self, venue: Venue) -> dict:
         raise NotImplementedError
 
     @abstractmethod
