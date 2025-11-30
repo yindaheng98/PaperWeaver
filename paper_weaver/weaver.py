@@ -25,7 +25,7 @@ class AuthorWeaverCache(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_authors_by_paper(self, paper: Paper) -> list[Author]:
+    async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -33,11 +33,19 @@ class AuthorWeaverCache(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_papers_by_author(self, author: Author) -> list[Paper]:
+    async def get_papers_by_author(self, author: Author) -> list[Paper] | None:
         raise NotImplementedError
 
     @abstractmethod
     async def set_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def is_link_author(self, paper: Paper, author: Author) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def link_author(self, paper: Paper, author: Author) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -90,7 +98,11 @@ class AuthorWeaver:
                 await self.dst.save_paper_info(paper, paper_info)
                 await self.cache.set_paper_info(paper, paper_info)
                 n_new_papers += 1
-            await self.dst.link_author(paper, author)
+
+            # Step 4: Link authors to paper if not already linked
+            if not await self.cache.is_link_author(paper, author):  # check link in cache
+                await self.dst.link_author(paper, author)  # link in dst
+                await self.cache.link_author(paper, author)  # link in cache
 
         return n_new_papers
 
@@ -127,7 +139,11 @@ class AuthorWeaver:
                 await self.dst.save_author_info(author, author_info)
                 await self.cache.set_author_info(author, author_info)
                 n_new_authors += 1
-            await self.dst.link_author(paper, author)
+
+            # Step 4: Link authors to paper if not already linked
+            if not await self.cache.is_link_author(paper, author):  # check link in cache
+                await self.dst.link_author(paper, author)  # link in dst
+                await self.cache.link_author(paper, author)  # link in cache
 
         return n_new_authors
 
