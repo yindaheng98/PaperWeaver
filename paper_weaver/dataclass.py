@@ -92,37 +92,17 @@ class DataDst(metaclass=ABCMeta):
     async def link_venue(self, paper: Paper, venue: Venue) -> None:
         raise NotImplementedError
 
-    async def link_venues(self, paper: Paper, venues: list[Venue]) -> None:
-        """Overwrite batch link venues for better performance."""
-        for venue in venues:
-            await self.link_venue(paper, venue)
-
     @abstractmethod
     async def link_author(self, paper: Paper, author: Author) -> None:
         raise NotImplementedError
-
-    async def link_authors(self, paper: Paper, authors: list[Author]) -> None:
-        """Overwrite batch link authors for better performance."""
-        for author in authors:
-            await self.link_author(paper, author)
 
     @abstractmethod
     async def link_citation(self, paper: Paper, citation: Paper) -> None:
         raise NotImplementedError
 
-    async def link_citations(self, paper: Paper, citations: list[Paper]) -> None:
-        """Overwrite batch link citations for better performance."""
-        for citation in citations:
-            await self.link_citation(paper, citation)
-
     @abstractmethod
     async def link_reference(self, paper: Paper, reference: Paper) -> None:
         raise NotImplementedError
-
-    async def link_references(self, paper: Paper, references: list[Paper]) -> None:
-        """Overwrite batch link references for better performance."""
-        for reference in references:
-            await self.link_reference(paper, reference)
 
     @abstractmethod
     async def save_author_info(self, author: Author, info: dict) -> None:
@@ -131,19 +111,9 @@ class DataDst(metaclass=ABCMeta):
     async def link_paper_to_author(self, author: Author, paper: Paper) -> None:
         return await self.link_author(paper, author)
 
-    async def link_papers_to_author(self, author: Author, papers: list[Paper]) -> None:
-        """Overwrite batch link papers for better performance."""
-        for paper in papers:
-            await self.link_paper_to_author(author, paper)
-
     @abstractmethod
     async def save_venue_info(self, venue: Venue, info: dict) -> None:
         raise NotImplementedError
 
     async def link_paper_to_venue(self, venue: Venue, paper: Paper) -> None:
         return await self.link_venue(paper, venue)
-
-    async def link_papers_to_venue(self, venue: Venue, papers: list[Paper]) -> None:
-        """Overwrite batch link papers for better performance."""
-        for paper in papers:
-            await self.link_paper_to_venue(venue, paper)
