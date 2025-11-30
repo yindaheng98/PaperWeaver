@@ -5,7 +5,9 @@ from dataclasses import dataclass
 @dataclass
 class Paper:
     identifiers: dict[str, str]  # example: {"doi": "10.1000/xyz123"}
-    title: str
+
+    async def get_info(self, src: "DataSrc") -> any:
+        return await src.get_paper_info(self)
 
     async def get_authors(self, src: "DataSrc") -> list["Author"]:
         return await src.get_authors_by_paper(self)
@@ -23,7 +25,9 @@ class Paper:
 @dataclass
 class Author:
     identifiers: dict[str, str]  # example: {"orcid": "0000-0001-2345-6789"}
-    name: str
+
+    async def get_info(self, src: "DataSrc") -> any:
+        return await src.get_author_info(self)
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
         return await src.get_papers_by_author(self)
@@ -32,7 +36,9 @@ class Author:
 @dataclass
 class Venue:
     identifiers: dict[str, str]  # example: {"issn": "1234-5678"}
-    name: str
+
+    async def get_info(self, src: "DataSrc") -> any:
+        return await src.get_venue_info(self)
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
         return await src.get_papers_by_venue(self)
@@ -40,11 +46,7 @@ class Venue:
 
 class DataSrc(metaclass=ABCMeta):
     @abstractmethod
-    async def get_papers_by_author(self, author: Author) -> list[Paper]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_papers_by_venue(self, venue: Venue) -> list[Paper]:
+    async def get_paper_info(self, paper: Paper) -> any:
         raise NotImplementedError
 
     @abstractmethod
@@ -63,10 +65,26 @@ class DataSrc(metaclass=ABCMeta):
     async def get_citations_by_paper(self, paper: Paper) -> list[Paper]:
         raise NotImplementedError
 
+    @abstractmethod
+    async def get_author_info(self, author: Author) -> any:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_papers_by_author(self, author: Author) -> list[Paper]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_venue_info(self, venue: Venue) -> any:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_papers_by_venue(self, venue: Venue) -> list[Paper]:
+        raise NotImplementedError
+
 
 class DataDst(metaclass=ABCMeta):
     @abstractmethod
-    async def save_paper(self, paper: Paper) -> None:
+    async def save_paper_info(self, paper: Paper, info) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -88,7 +106,7 @@ class DataDst(metaclass=ABCMeta):
             await self.link_reference(paper, reference)
 
     @abstractmethod
-    async def save_author(self, author: Author) -> None:
+    async def save_author_info(self, author: Author, info) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -101,7 +119,7 @@ class DataDst(metaclass=ABCMeta):
             await self.link_author(paper, author)
 
     @abstractmethod
-    async def save_venue(self, venue: Venue) -> None:
+    async def save_venue_info(self, venue: Venue, info) -> None:
         raise NotImplementedError
 
     @abstractmethod
