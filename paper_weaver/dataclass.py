@@ -8,8 +8,8 @@ class Paper:
     identifiers: set[str]  # example: ["doi:10.1000/xyz123"]
 
     async def get_info(self, src: "DataSrc") -> Tuple["Paper", dict]:
-        identifiers, info = await src.get_paper_info(self)
-        self.identifiers.update(identifiers=self.identifiers.union(identifiers))
+        paper, info = await src.get_paper_info(self)
+        self.identifiers.update(identifiers=self.identifiers.union(paper.identifiers))
         return self, info
 
     async def get_authors(self, src: "DataSrc") -> list["Author"]:
@@ -30,8 +30,8 @@ class Author:
     identifiers: set[str]  # example: ["orcid:0000-0001-2345-6789"]
 
     async def get_info(self, src: "DataSrc") -> Tuple["Author", dict]:
-        identifiers, info = await src.get_author_info(self)
-        self.identifiers.update(identifiers=self.identifiers.union(identifiers))
+        author, info = await src.get_author_info(self)
+        self.identifiers.update(identifiers=self.identifiers.union(author.identifiers))
         return self, info
 
     async def get_papers(self, src: "DataSrc") -> list[Paper]:
@@ -53,8 +53,8 @@ class Venue:
 
 class DataSrc(metaclass=ABCMeta):
     @abstractmethod
-    async def get_paper_info(self, paper: Paper) -> Tuple[set[str], dict]:
-        """return (identifiers, info)"""
+    async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict]:
+        """return (updated paper, info)"""
         raise NotImplementedError
 
     @abstractmethod
@@ -74,8 +74,8 @@ class DataSrc(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_author_info(self, author: Author) -> Tuple[set[str], dict]:
-        """return (identifiers, info)"""
+    async def get_author_info(self, author: Author) -> Tuple[Author, dict]:
+        """return (updated author, info)"""
         raise NotImplementedError
 
     @abstractmethod
@@ -83,8 +83,8 @@ class DataSrc(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_venue_info(self, venue: Venue) -> Tuple[set[str], dict]:
-        """return (identifiers, info)"""
+    async def get_venue_info(self, venue: Venue) -> Tuple[Venue, dict]:
+        """return (updated venue, info)"""
         raise NotImplementedError
 
     @abstractmethod
