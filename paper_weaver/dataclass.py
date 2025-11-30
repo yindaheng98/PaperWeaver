@@ -84,7 +84,7 @@ class DataSrc(metaclass=ABCMeta):
 
 class DataDst(metaclass=ABCMeta):
     @abstractmethod
-    async def save_paper_info(self, paper: Paper, info) -> None:
+    async def save_paper_info(self, paper: Paper, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -106,7 +106,7 @@ class DataDst(metaclass=ABCMeta):
             await self.link_reference(paper, reference)
 
     @abstractmethod
-    async def save_author_info(self, author: Author, info) -> None:
+    async def save_author_info(self, author: Author, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -119,7 +119,7 @@ class DataDst(metaclass=ABCMeta):
             await self.link_author(paper, author)
 
     @abstractmethod
-    async def save_venue_info(self, venue: Venue, info) -> None:
+    async def save_venue_info(self, venue: Venue, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
