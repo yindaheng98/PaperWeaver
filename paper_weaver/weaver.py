@@ -63,41 +63,73 @@ class AuthorWeaver:
         self.dst = dst
         self.cache = cache
 
-    async def _load_author_info_and_papers(self, author: Author) -> bool:
-        author, info = await author.get_info(self.src)
-        if info is None:
-            return False
-        await self.cache.set_author_info(author, info)
-        await self.dst.save_author_info(author, info)
-        return True
+    async def _fetch_author_info(self, author: Author) -> Author | None:
+        author, info = await self.cache.get_author_info(author)  # try cache first
+        if info is None:  # not in cache
+            author, info = await author.get_info(self.src)  # fetch from source
+            if info is None:  # failed to fetch
+                return None
+            # save to cache and dst
+            await self.dst.save_author_info(author, info)
+            await self.cache.set_author_info(author, info)
+        return author
 
-    async def _load_paper_info_and_authors(self, paper: Paper) -> bool:
-        paper, info = await paper.get_info(self.src)
-        if info is None:
-            return False
-        await self.cache.set_paper_info(paper, info)
-        await self.dst.save_paper_info(paper, info)
-        return True
+    async def _fetch_author_info_and_papers(self, author: Author) -> int:
+        author = await self._fetch_author_info(author)
+        if author is None:
+            return 0  # skip
+
+        papers = await self.cache.get_papers_by_author(author)  # try cache first
+        if len(papers) == 0:  # not in cache
+            papers = await author.get_papers(self.src)  # fetch from source
+            if len(papers) == 0:  # failed to fetch
+                return 0  # skip
+            # save to cache and dst
+            await self.cache.set_papers_of_author(author, papers)
+        return len(papers)
+
+    async def _fetch_paper_info(self, paper: Paper) -> Paper | None:
+        paper, info = await self.cache.get_paper_info(paper)  # try cache first
+        if info is None:  # not in cache
+            paper, info = await paper.get_info(self.src)  # fetch from source
+            if info is None:  # failed to fetch
+                return None
+            # save to cache and dst
+            await self.dst.save_paper_info(paper, info)
+            await self.cache.set_paper_info(paper, info)
+        return paper
+
+    async def _fetch_paper_info_and_authors(self, paper: Paper) -> int:
+        paper = await self._fetch_paper_info(paper)
+        if paper is None:
+            return 0  # skip
+
+        authors = await self.cache.get_authors_by_paper(paper)  # try cache first
+        if len(authors) == 0:  # not in cache
+            authors = await paper.get_authors(self.src)  # fetch from source
+            if len(authors) == 0:  # failed to fetch
+                return 0  # skip
+            # save to cache and dst
+            await self.cache.set_authors_of_paper(paper, authors)
+        return len(authors)
 
     async def bfs_once(self):
         tasks = []
         async for author in self.cache.iterate_authors():
-            if len(await self.cache.get_papers_by_author(author)) > 0:
-                continue  # there are already papers in cache, means this author has been processed, skip
-            tasks.append(self._load_author_info_and_papers(author))
+            tasks.append(self._fetch_author_info_and_papers(author))
         self.logger.info(f"Fetching papers from {len(tasks)} authors")
         success = await asyncio.gather(*tasks)
-        succ_count = sum([1 for s in success if s])
-        fail_count = sum([1 for s in success if not s])
-        self.logger.info(f"Fetched papers from {len(tasks)} authors: {succ_count} succeeded, {fail_count} failed")
+        succ_count = sum([1 for s in success if s > 0])
+        fail_count = sum([1 for s in success if s <= 0])
+        fetched_count = sum(success)
+        self.logger.info(f"Fetched {fetched_count} new papers from {succ_count} authors. {fail_count} authors do not have new papers.")
 
         tasks = []
         async for paper in self.cache.iterate_papers():
-            if len(await self.cache.get_authors_by_paper(paper)) > 0:
-                continue  # there are already authors in cache, means this paper has been processed, skip
-            tasks.append(self._load_paper_info_and_authors(paper))
+            tasks.append(self._fetch_paper_info_and_authors(paper))
         self.logger.info(f"Fetching authors from {len(tasks)} papers")
         success = await asyncio.gather(*tasks)
-        succ_count = sum([1 for s in success if s])
-        fail_count = sum([1 for s in success if not s])
-        self.logger.info(f"Fetched authors from {len(tasks)} papers: {succ_count} succeeded, {fail_count} failed")
+        succ_count = sum([1 for s in success if s > 0])
+        fail_count = sum([1 for s in success if s <= 0])
+        fetched_count = sum(success)
+        self.logger.info(f"Fetched {fetched_count} new authors from {succ_count} papers. {fail_count} papers do not have new authors.")
