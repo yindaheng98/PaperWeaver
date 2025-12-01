@@ -1,12 +1,8 @@
 """
-Storage interfaces for link tracking and pending entity lists.
+Storage interface for committed link tracking.
 
-Two types of storage:
-1. CommittedLinkStorageIface: Tracks links that have been written to DataDst
-2. PendingListStorageIface: Stores pending entity lists (may lack info, not yet in DataDst)
-
-Manager classes:
-- PendingListManager: Combines PendingListStorageIface with IdentifierRegistryIface
+CommittedLinkStorageIface: Tracks links that have been written to DataDst.
+Used for quick link existence checks to avoid duplicate writes.
 """
 
 from abc import ABCMeta, abstractmethod

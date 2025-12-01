@@ -6,12 +6,10 @@ When objects are merged, their identifier sets are combined.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import TypeVar, Generic, Set, Optional
-
-T = TypeVar('T')  # Paper, Author, or Venue
+from typing import Set, Optional
 
 
-class IdentifierRegistryIface(Generic[T], metaclass=ABCMeta):
+class IdentifierRegistryIface(metaclass=ABCMeta):
     """
     Interface for identifier registry that manages object identity.
 

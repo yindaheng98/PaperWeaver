@@ -39,8 +39,10 @@ class PaperLinkWeaverCacheIface(WeaverCacheIface, metaclass=ABCMeta):
 
     async def is_citation_link_committed(self, paper: Paper, citation: Paper) -> bool:
         """Check if paper-citation link has been committed to DataDst."""
+        # Citation (paper <- citation) is semantically equivalent to reference (citation -> paper)
         return await self.is_reference_link_committed(citation, paper)
 
     async def commit_citation_link(self, paper: Paper, citation: Paper) -> None:
         """Mark paper-citation link as committed to DataDst."""
+        # Citation (paper <- citation) is semantically equivalent to reference (citation -> paper)
         return await self.commit_reference_link(citation, paper)

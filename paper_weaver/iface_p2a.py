@@ -39,7 +39,7 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
     @property
     @abstractmethod
     def cache(self) -> Paper2AuthorsWeaverCacheIface:
-        raise ValueError("Model is not set")
+        raise ValueError("Cache is not set")
 
     async def paper_to_authors(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and authors, write to cache and dst. Return number of new authors fetched and number of failed authors, or None if failed."""

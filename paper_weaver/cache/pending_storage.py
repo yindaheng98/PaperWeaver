@@ -1,9 +1,7 @@
 """
-Storage interfaces for link tracking and pending entity lists.
+Storage interface for pending entity lists.
 
-Two types of storage:
-1. CommittedLinkStorageIface: Tracks links that have been written to DataDst
-2. PendingListStorageIface: Stores pending entity lists (may lack info, not yet in DataDst)
+PendingListStorageIface: Stores pending entity lists (may lack info, not yet in DataDst)
 
 Manager classes:
 - PendingListManager: Combines PendingListStorageIface with IdentifierRegistryIface
@@ -54,10 +52,10 @@ class PendingListManager:
         manager = PendingListManager(paper_registry, pending_storage)
 
         # Set pending papers for an author
-        registered_sets = await manager.set_list(author_cid, [p.identifiers for p in papers])
+        registered_sets = await manager.set_pending_identifier_sets(author_cid, [p.identifiers for p in papers])
 
         # Get pending papers for an author
-        id_sets = await manager.get_list(author_cid)
+        id_sets = await manager.get_pending_identifier_sets(author_cid)
     """
 
     def __init__(
@@ -79,7 +77,7 @@ class PendingListManager:
             from_canonical_id: The canonical ID of the source entity
 
         Returns:
-            List of identifier sets (one per entity), or None if not set
+            Dictionary mapping canonical_id to identifier sets, or None if not set
         """
         identifiers_list = await self._storage.get_pending_identifier_sets(from_canonical_id)
         if identifiers_list is None:
@@ -112,22 +110,22 @@ class PendingListManager:
 
     async def set_pending_identifier_sets(self, from_canonical_id: str, identifiers_list: List[Set[str]]) -> List[Set[str]]:
         """
-        Set pending entity list, registering each entity.
+        Set pending entity list, registering each entity and merging with existing entries.
 
         Each entity's identifiers are registered, making them discoverable
-        via the registry's iteration.
+        via the registry's iteration. If there are existing pending entries,
+        new entries are merged (deduplicated by canonical ID).
 
         Args:
             from_canonical_id: The canonical ID of the source entity
             identifiers_list: List of identifier sets for each pending entity
 
         Returns:
-            List of merged identifier sets (with any existing identifiers)
+            List of merged identifier sets (may include previously pending entities)
         """
         result = await self.get_pending_canonical_id_identifier_set_dict(from_canonical_id)
         if result is None:
             result = {}
-        registered_sets = []
         for id_set in identifiers_list:
             canonical_id = await self._registry.register(id_set)
             all_identifiers = await self._registry.get_all_identifiers(canonical_id)

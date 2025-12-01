@@ -39,7 +39,7 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
     @property
     @abstractmethod
     def cache(self) -> Paper2CitationsWeaverCacheIface:
-        raise ValueError("Model is not set")
+        raise ValueError("Cache is not set")
 
     async def paper_to_citations(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and citations, write to cache and dst. Return number of new citations fetched and number of failed citations, or None if failed."""

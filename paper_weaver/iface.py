@@ -25,10 +25,12 @@ class WeaverCacheIface(metaclass=ABCMeta):
 
     @abstractmethod
     def iterate_authors(self) -> AsyncIterator[Author]:
+        """Iterate over all registered authors."""
         raise NotImplementedError
 
     @abstractmethod
     def iterate_papers(self) -> AsyncIterator[Paper]:
+        """Iterate over all registered papers."""
         raise NotImplementedError
 
 

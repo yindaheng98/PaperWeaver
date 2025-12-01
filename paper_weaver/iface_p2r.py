@@ -39,7 +39,7 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
     @property
     @abstractmethod
     def cache(self) -> Paper2ReferencesWeaverCacheIface:
-        raise ValueError("Model is not set")
+        raise ValueError("Cache is not set")
 
     async def paper_to_references(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and references, write to cache and dst. Return number of new references fetched and number of failed references, or None if failed."""

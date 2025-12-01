@@ -24,7 +24,8 @@ from ..iface_p2r import Paper2ReferencesWeaverCacheIface
 
 from .identifier import IdentifierRegistryIface
 from .info_storage import InfoStorageIface, EntityInfoManager
-from .link_storage import CommittedLinkStorageIface, PendingListStorageIface, PendingListManager
+from .link_storage import CommittedLinkStorageIface
+from .pending_storage import PendingListStorageIface, PendingListManager
 
 
 class ComposableCacheBase(WeaverCacheIface):
@@ -77,7 +78,7 @@ class ComposableCacheBase(WeaverCacheIface):
     # Iteration methods
 
     def iterate_papers(self) -> AsyncIterator[Paper]:
-        """Iterate over all papers without info."""
+        """Iterate over all registered papers."""
         return self._iterate_papers_impl()
 
     async def _iterate_papers_impl(self) -> AsyncIterator[Paper]:
@@ -85,7 +86,7 @@ class ComposableCacheBase(WeaverCacheIface):
             yield Paper(identifiers=identifiers)
 
     def iterate_authors(self) -> AsyncIterator[Author]:
-        """Iterate over all authors without info."""
+        """Iterate over all registered authors."""
         return self._iterate_authors_impl()
 
     async def _iterate_authors_impl(self) -> AsyncIterator[Author]:

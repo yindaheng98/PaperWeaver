@@ -11,7 +11,7 @@ class Paper:
         paper, info = await src.get_paper_info_no_exception(self)
         if info is None:
             return self, None
-        self.identifiers.update(identifiers=self.identifiers.union(paper.identifiers))
+        self.identifiers.update(paper.identifiers)
         return self, info
 
     async def get_authors(self, src: "DataSrc") -> list["Author"] | None:
@@ -35,7 +35,7 @@ class Author:
         author, info = await src.get_author_info_no_exception(self)
         if info is None:
             return self, None
-        self.identifiers.update(identifiers=self.identifiers.union(author.identifiers))
+        self.identifiers.update(author.identifiers)
         return self, info
 
     async def get_papers(self, src: "DataSrc") -> list[Paper] | None:
@@ -50,7 +50,7 @@ class Venue:
         venue, info = await src.get_venue_info_no_exception(self)
         if info is None:
             return self, None
-        self.identifiers.update(identifiers=self.identifiers.union(venue.identifiers))
+        self.identifiers.update(venue.identifiers)
         return self, info
 
     async def get_papers(self, src: "DataSrc") -> list[Paper] | None:
