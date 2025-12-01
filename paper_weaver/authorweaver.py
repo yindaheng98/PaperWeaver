@@ -5,7 +5,20 @@ from typing import AsyncIterator, Tuple
 from .dataclass import Paper, Author, DataSrc, DataDst
 
 
-class AuthorWeaverCache(metaclass=ABCMeta):
+class WeaverIface(metaclass=ABCMeta):
+
+    @property
+    @abstractmethod
+    def src(self) -> DataSrc:
+        raise ValueError("Model is not set")
+
+    @property
+    @abstractmethod
+    def dst(self) -> DataDst:
+        raise ValueError("Model is not set")
+
+
+class Author2PapersWeaverCacheIface(metaclass=ABCMeta):
     @abstractmethod
     async def get_author_info(self, author: Author) -> Tuple[Author, dict | None]:
         """return (updated author, info or None if not in cache)"""
@@ -25,14 +38,6 @@ class AuthorWeaverCache(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def set_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     async def get_papers_by_author(self, author: Author) -> list[Paper] | None:
         raise NotImplementedError
 
@@ -48,33 +53,12 @@ class AuthorWeaverCache(metaclass=ABCMeta):
     async def link_author(self, paper: Paper, author: Author) -> None:
         raise NotImplementedError
 
-    @abstractmethod
-    def iterate_authors(self) -> AsyncIterator[Author, None]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def iterate_papers(self) -> AsyncIterator[Paper, None]:
-        raise NotImplementedError
-
-
-class WeaverIface(metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def src(self) -> DataSrc:
-        raise ValueError("Model is not set")
-
-    @property
-    @abstractmethod
-    def dst(self) -> DataDst:
-        raise ValueError("Model is not set")
-
 
 class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def cache(self) -> AuthorWeaverCache:
+    def cache(self) -> Author2PapersWeaverCacheIface:
         raise ValueError("Model is not set")
 
     async def author_to_papers(self, author: Author) -> Tuple[int, int] | None:
@@ -125,11 +109,47 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
         return n_new_papers, n_failed
 
 
+class Paper2AuthorsWeaverCacheIface(metaclass=ABCMeta):
+    @abstractmethod
+    async def get_author_info(self, author: Author) -> Tuple[Author, dict | None]:
+        """return (updated author, info or None if not in cache)"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_author_info(self, author: Author, info: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict | None]:
+        """return (updated paper, info or None if not in cache)"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_paper_info(self, paper: Paper, info: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def is_link_author(self, paper: Paper, author: Author) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def link_author(self, paper: Paper, author: Author) -> None:
+        raise NotImplementedError
+
+
 class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def cache(self) -> AuthorWeaverCache:
+    def cache(self) -> Paper2AuthorsWeaverCacheIface:
         raise ValueError("Model is not set")
 
     async def paper_to_authors(self, paper: Paper) -> Tuple[int, int] | None:
@@ -178,6 +198,17 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
         n_failed = sum([1 for r in results if r is None])
 
         return n_new_authors, n_failed
+
+
+class AuthorWeaverCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface, metaclass=ABCMeta):
+
+    @abstractmethod
+    def iterate_authors(self) -> AsyncIterator[Author, None]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def iterate_papers(self) -> AsyncIterator[Paper, None]:
+        raise NotImplementedError
 
 
 class AuthorWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface):
