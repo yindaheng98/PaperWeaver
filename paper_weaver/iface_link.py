@@ -1,31 +1,46 @@
+"""
+Cache interfaces for tracking committed links.
+
+These methods track which links have been formally written to DataDst.
+Only objects with successfully fetched info reach this stage.
+"""
+
 from abc import ABCMeta, abstractmethod
 from .dataclass import Paper, Author
 from .iface import WeaverCacheIface
 
 
 class AuthorLinkWeaverCacheIface(WeaverCacheIface, metaclass=ABCMeta):
+    """Cache interface for paper-author link commitment tracking."""
 
     @abstractmethod
-    async def is_link_author(self, paper: Paper, author: Author) -> bool:
+    async def is_author_link_committed(self, paper: Paper, author: Author) -> bool:
+        """Check if paper-author link has been committed to DataDst."""
         raise NotImplementedError
 
     @abstractmethod
-    async def link_author(self, paper: Paper, author: Author) -> None:
+    async def commit_author_link(self, paper: Paper, author: Author) -> None:
+        """Mark paper-author link as committed to DataDst."""
         raise NotImplementedError
 
 
 class PaperLinkWeaverCacheIface(WeaverCacheIface, metaclass=ABCMeta):
+    """Cache interface for paper-paper link commitment tracking (references/citations)."""
 
     @abstractmethod
-    async def is_link_reference(self, paper: Paper, reference: Paper) -> bool:
+    async def is_reference_link_committed(self, paper: Paper, reference: Paper) -> bool:
+        """Check if paper-reference link has been committed to DataDst."""
         raise NotImplementedError
 
     @abstractmethod
-    async def link_reference(self, paper: Paper, reference: Paper) -> None:
+    async def commit_reference_link(self, paper: Paper, reference: Paper) -> None:
+        """Mark paper-reference link as committed to DataDst."""
         raise NotImplementedError
 
-    async def is_link_citation(self, paper: Paper, citation: Paper) -> bool:
-        return await self.is_link_reference(citation, paper)
+    async def is_citation_link_committed(self, paper: Paper, citation: Paper) -> bool:
+        """Check if paper-citation link has been committed to DataDst."""
+        return await self.is_reference_link_committed(citation, paper)
 
-    async def link_citation(self, paper: Paper, citation: Paper) -> None:
-        return await self.link_reference(citation, paper)
+    async def commit_citation_link(self, paper: Paper, citation: Paper) -> None:
+        """Mark paper-citation link as committed to DataDst."""
+        return await self.commit_reference_link(citation, paper)

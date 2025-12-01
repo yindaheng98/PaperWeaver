@@ -1,3 +1,12 @@
+"""
+Author to Papers weaver interface.
+
+Workflow:
+1. Get/set pending papers (objects may lack info, not written to DataDst)
+2. Process each paper to fetch info
+3. Commit link to DataDst once info is fetched
+"""
+
 from abc import ABCMeta, abstractmethod
 import asyncio
 from typing import Tuple
@@ -7,13 +16,21 @@ from .iface_link import AuthorLinkWeaverCacheIface
 
 
 class Author2PapersWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMeta):
+    """
+    Cache interface for author -> papers relationship.
+
+    Pending papers: Temporarily cached papers that may not have info yet.
+    These are discoverable via iterate_papers() for later processing.
+    """
 
     @abstractmethod
-    async def get_papers_by_author(self, author: Author) -> list[Paper] | None:
+    async def get_pending_papers(self, author: Author) -> list[Paper] | None:
+        """Get pending papers for author. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
+    async def set_pending_papers(self, author: Author, papers: list[Paper]) -> None:
+        """Set pending papers for author (registers them for later processing)."""
         raise NotImplementedError
 
 
@@ -36,16 +53,16 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.dst.save_author_info(author, author_info)
             await self.cache.set_author_info(author, author_info)
 
-        # Step 2: Fetch and save papers of this author
-        papers = await self.cache.get_papers_by_author(author)  # fetch from cache
+        # Step 2: Get or fetch pending papers (not yet written to DataDst)
+        papers = await self.cache.get_pending_papers(author)  # fetch from cache
         if papers is None:  # not in cache
             papers = await author.get_papers(self.src)  # fetch from source
             if papers is None:  # failed to fetch
                 return None  # no new papers
-            # Write papers if fetched
-            await self.cache.add_papers_of_author(author, papers)
+            # Cache pending papers (makes them discoverable via iterate_papers)
+            await self.cache.set_pending_papers(author, papers)
 
-        # Step 3: Fetch and save info for all papers of this author
+        # Step 3: Process each paper - fetch info and commit link
         async def process_paper(paper):
             n_new = 0
             paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
@@ -58,10 +75,10 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
                 await self.cache.set_paper_info(paper, paper_info)
                 n_new = 1
 
-            # Step 4: Link authors to paper if not already linked
-            if not await self.cache.is_link_author(paper, author):  # check link in cache
-                await self.dst.link_author(paper, author)  # link in dst
-                await self.cache.link_author(paper, author)  # link in cache
+            # Step 4: Commit link to DataDst if not already committed
+            if not await self.cache.is_author_link_committed(paper, author):
+                await self.dst.link_author(paper, author)  # write to DataDst
+                await self.cache.commit_author_link(paper, author)  # mark as committed
 
             return n_new
 

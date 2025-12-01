@@ -1,3 +1,12 @@
+"""
+Paper to References weaver interface.
+
+Workflow:
+1. Get/set pending references (objects may lack info, not written to DataDst)
+2. Process each reference to fetch info
+3. Commit link to DataDst once info is fetched
+"""
+
 from abc import ABCMeta, abstractmethod
 import asyncio
 from typing import Tuple
@@ -7,13 +16,21 @@ from .iface_link import PaperLinkWeaverCacheIface
 
 
 class Paper2ReferencesWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMeta):
+    """
+    Cache interface for paper -> references relationship.
+
+    Pending references: Temporarily cached references that may not have info yet.
+    These are discoverable via iterate_papers() for later processing.
+    """
 
     @abstractmethod
-    async def get_references_by_paper(self, paper: Paper) -> list[Paper] | None:
+    async def get_pending_references(self, paper: Paper) -> list[Paper] | None:
+        """Get pending references for paper. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
+    async def set_pending_references(self, paper: Paper, references: list[Paper]) -> None:
+        """Set pending references for paper (registers them for later processing)."""
         raise NotImplementedError
 
 
@@ -36,16 +53,16 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.dst.save_paper_info(paper, paper_info)
             await self.cache.set_paper_info(paper, paper_info)
 
-        # Step 2: Fetch and save references of this paper
-        references = await self.cache.get_references_by_paper(paper)  # fetch from cache
+        # Step 2: Get or fetch pending references (not yet written to DataDst)
+        references = await self.cache.get_pending_references(paper)  # fetch from cache
         if references is None:  # not in cache
             references = await paper.get_references(self.src)  # fetch from source
             if references is None:  # failed to fetch
                 return None  # no new references
-            # Write references if fetched
-            await self.cache.add_references_of_paper(paper, references)
+            # Cache pending references (makes them discoverable via iterate_papers)
+            await self.cache.set_pending_references(paper, references)
 
-        # Step 3: Fetch and save info for all references of this paper
+        # Step 3: Process each reference - fetch info and commit link
         async def process_reference(reference):
             n_new = 0
             reference, reference_info = await self.cache.get_paper_info(reference)  # fetch from cache
@@ -58,10 +75,10 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
                 await self.cache.set_paper_info(reference, reference_info)
                 n_new = 1
 
-            # Step 4: Link references to paper if not already linked
-            if not await self.cache.is_link_reference(paper, reference):  # check link in cache
-                await self.dst.link_reference(paper, reference)  # link in dst
-                await self.cache.link_reference(paper, reference)  # link in cache
+            # Step 4: Commit link to DataDst if not already committed
+            if not await self.cache.is_reference_link_committed(paper, reference):
+                await self.dst.link_reference(paper, reference)  # write to DataDst
+                await self.cache.commit_reference_link(paper, reference)  # mark as committed
 
             return n_new
 

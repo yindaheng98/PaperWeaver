@@ -1,3 +1,12 @@
+"""
+Paper to Authors weaver interface.
+
+Workflow:
+1. Get/set pending authors (objects may lack info, not written to DataDst)
+2. Process each author to fetch info
+3. Commit link to DataDst once info is fetched
+"""
+
 from abc import ABCMeta, abstractmethod
 import asyncio
 from typing import Tuple
@@ -7,13 +16,21 @@ from .iface_link import AuthorLinkWeaverCacheIface
 
 
 class Paper2AuthorsWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMeta):
+    """
+    Cache interface for paper -> authors relationship.
+
+    Pending authors: Temporarily cached authors that may not have info yet.
+    These are discoverable via iterate_authors() for later processing.
+    """
 
     @abstractmethod
-    async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
+    async def get_pending_authors(self, paper: Paper) -> list[Author] | None:
+        """Get pending authors for paper. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
+    async def set_pending_authors(self, paper: Paper, authors: list[Author]) -> None:
+        """Set pending authors for paper (registers them for later processing)."""
         raise NotImplementedError
 
 
@@ -36,16 +53,16 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.dst.save_paper_info(paper, paper_info)
             await self.cache.set_paper_info(paper, paper_info)
 
-        # Step 2: Fetch and save authors of this paper
-        authors = await self.cache.get_authors_by_paper(paper)  # fetch from cache
+        # Step 2: Get or fetch pending authors (not yet written to DataDst)
+        authors = await self.cache.get_pending_authors(paper)  # fetch from cache
         if authors is None:  # not in cache
             authors = await paper.get_authors(self.src)  # fetch from source
             if authors is None:  # failed to fetch
                 return None  # no new authors
-            # Write authors if fetched
-            await self.cache.add_authors_of_paper(paper, authors)
+            # Cache pending authors (makes them discoverable via iterate_authors)
+            await self.cache.set_pending_authors(paper, authors)
 
-        # Step 3: Fetch and save info for all authors of this paper
+        # Step 3: Process each author - fetch info and commit link
         async def process_author(author):
             n_new = 0
             author, author_info = await self.cache.get_author_info(author)  # fetch from cache
@@ -58,10 +75,10 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
                 await self.cache.set_author_info(author, author_info)
                 n_new = 1
 
-            # Step 4: Link authors to paper if not already linked
-            if not await self.cache.is_link_author(paper, author):  # check link in cache
-                await self.dst.link_author(paper, author)  # link in dst
-                await self.cache.link_author(paper, author)  # link in cache
+            # Step 4: Commit link to DataDst if not already committed
+            if not await self.cache.is_author_link_committed(paper, author):
+                await self.dst.link_author(paper, author)  # write to DataDst
+                await self.cache.commit_author_link(paper, author)  # mark as committed
 
             return n_new
 
