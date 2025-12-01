@@ -49,21 +49,21 @@ from .info_storage import (
 # Link Storage
 from .link_storage import (
     LinkStorageIface,
-    MemoryLinkStorage,
-    RedisLinkStorage,
     EntityListStorageIface,
-    MemoryEntityListStorage,
-    RedisEntityListStorage,
 )
 
 from .memory import (  # noqa: F401
     MemoryIdentifierRegistry,
     MemoryInfoStorage,
+    MemoryLinkStorage,
+    MemoryEntityListStorage,
 )
 
 from .redis import (  # noqa: F401
     RedisIdentifierRegistry,
     RedisInfoStorage,
+    RedisLinkStorage,
+    RedisEntityListStorage,
 )
 
 # Composite Cache

@@ -5,12 +5,8 @@ Provides convenient functions to create fully configured cache instances
 using either memory or Redis backends.
 """
 
-from .memory import MemoryIdentifierRegistry, MemoryInfoStorage
-from .redis import RedisIdentifierRegistry, RedisInfoStorage
-from .link_storage import (
-    MemoryLinkStorage, RedisLinkStorage,
-    MemoryEntityListStorage, RedisEntityListStorage
-)
+from .memory import MemoryIdentifierRegistry, MemoryInfoStorage, MemoryLinkStorage, MemoryEntityListStorage
+from .redis import RedisIdentifierRegistry, RedisInfoStorage, RedisLinkStorage, RedisEntityListStorage
 from .composite import (
     FullAuthorWeaverCache,
     FullPaperWeaverCache,
