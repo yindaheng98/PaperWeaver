@@ -5,8 +5,8 @@ Provides convenient functions to create fully configured cache instances
 using either memory or Redis backends.
 """
 
-from .memory import MemoryIdentifierRegistry, MemoryInfoStorage, MemoryLinkStorage, MemoryEntityListStorage
-from .redis import RedisIdentifierRegistry, RedisInfoStorage, RedisLinkStorage, RedisEntityListStorage
+from .memory import MemoryIdentifierRegistry, MemoryInfoStorage, MemoryCommittedLinkStorage, MemoryPendingListStorage
+from .redis import RedisIdentifierRegistry, RedisInfoStorage, RedisCommittedLinkStorage, RedisPendingListStorage
 from .composite import (
     FullAuthorWeaverCache,
     FullPaperWeaverCache,
@@ -24,9 +24,9 @@ def create_memory_author_weaver_cache() -> FullAuthorWeaverCache:
         paper_info_storage=MemoryInfoStorage(),
         author_registry=MemoryIdentifierRegistry(),
         author_info_storage=MemoryInfoStorage(),
-        author_paper_links=MemoryLinkStorage(),
-        author_papers_list=MemoryEntityListStorage(),
-        paper_authors_list=MemoryEntityListStorage(),
+        committed_author_links=MemoryCommittedLinkStorage(),
+        pending_papers=MemoryPendingListStorage(),
+        pending_authors=MemoryPendingListStorage(),
     )
 
 
@@ -43,9 +43,9 @@ def create_redis_author_weaver_cache(redis_client, prefix: str = "pw") -> FullAu
         paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info"),
         author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg"),
         author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info"),
-        author_paper_links=RedisLinkStorage(redis_client, f"{prefix}:ap_link"),
-        author_papers_list=RedisEntityListStorage(redis_client, f"{prefix}:a2p_list"),
-        paper_authors_list=RedisEntityListStorage(redis_client, f"{prefix}:p2a_list"),
+        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap"),
+        pending_papers=RedisPendingListStorage(redis_client, f"{prefix}:pending_a2p"),
+        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a"),
     )
 
 
@@ -56,11 +56,11 @@ def create_memory_paper_weaver_cache() -> FullPaperWeaverCache:
         paper_info_storage=MemoryInfoStorage(),
         author_registry=MemoryIdentifierRegistry(),
         author_info_storage=MemoryInfoStorage(),
-        author_paper_links=MemoryLinkStorage(),
-        paper_reference_links=MemoryLinkStorage(),
-        paper_authors_list=MemoryEntityListStorage(),
-        paper_references_list=MemoryEntityListStorage(),
-        paper_citations_list=MemoryEntityListStorage(),
+        committed_author_links=MemoryCommittedLinkStorage(),
+        committed_reference_links=MemoryCommittedLinkStorage(),
+        pending_authors=MemoryPendingListStorage(),
+        pending_references=MemoryPendingListStorage(),
+        pending_citations=MemoryPendingListStorage(),
     )
 
 
@@ -77,11 +77,11 @@ def create_redis_paper_weaver_cache(redis_client, prefix: str = "pw") -> FullPap
         paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info"),
         author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg"),
         author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info"),
-        author_paper_links=RedisLinkStorage(redis_client, f"{prefix}:ap_link"),
-        paper_reference_links=RedisLinkStorage(redis_client, f"{prefix}:pr_link"),
-        paper_authors_list=RedisEntityListStorage(redis_client, f"{prefix}:p2a_list"),
-        paper_references_list=RedisEntityListStorage(redis_client, f"{prefix}:p2r_list"),
-        paper_citations_list=RedisEntityListStorage(redis_client, f"{prefix}:p2c_list"),
+        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap"),
+        committed_reference_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_pr"),
+        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a"),
+        pending_references=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2r"),
+        pending_citations=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2c"),
     )
 
 
@@ -100,7 +100,7 @@ class HybridCacheBuilder:
             .with_redis_paper_info("paper_info")
             .with_memory_author_registry()
             .with_redis_author_info("author_info")
-            .with_memory_links()
+            .with_memory_committed_author_links()
             .build_author_weaver_cache())
     """
 
@@ -110,12 +110,12 @@ class HybridCacheBuilder:
         self._paper_info = None
         self._author_registry = None
         self._author_info = None
-        self._author_paper_links = None
-        self._paper_reference_links = None
-        self._author_papers_list = None
-        self._paper_authors_list = None
-        self._paper_references_list = None
-        self._paper_citations_list = None
+        self._committed_author_links = None
+        self._committed_reference_links = None
+        self._pending_papers = None
+        self._pending_authors = None
+        self._pending_references = None
+        self._pending_citations = None
 
     # Paper registry
 
@@ -157,56 +157,56 @@ class HybridCacheBuilder:
         self._author_info = RedisInfoStorage(self._redis, prefix)
         return self
 
-    # Links
+    # Committed links
 
-    def with_memory_author_paper_links(self) -> "HybridCacheBuilder":
-        self._author_paper_links = MemoryLinkStorage()
+    def with_memory_committed_author_links(self) -> "HybridCacheBuilder":
+        self._committed_author_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_author_paper_links(self, prefix: str = "ap_link") -> "HybridCacheBuilder":
-        self._author_paper_links = RedisLinkStorage(self._redis, prefix)
+    def with_redis_committed_author_links(self, prefix: str = "committed_ap") -> "HybridCacheBuilder":
+        self._committed_author_links = RedisCommittedLinkStorage(self._redis, prefix)
         return self
 
-    def with_memory_paper_reference_links(self) -> "HybridCacheBuilder":
-        self._paper_reference_links = MemoryLinkStorage()
+    def with_memory_committed_reference_links(self) -> "HybridCacheBuilder":
+        self._committed_reference_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_paper_reference_links(self, prefix: str = "pr_link") -> "HybridCacheBuilder":
-        self._paper_reference_links = RedisLinkStorage(self._redis, prefix)
+    def with_redis_committed_reference_links(self, prefix: str = "committed_pr") -> "HybridCacheBuilder":
+        self._committed_reference_links = RedisCommittedLinkStorage(self._redis, prefix)
         return self
 
-    # Entity lists
+    # Pending lists
 
-    def with_memory_author_papers_list(self) -> "HybridCacheBuilder":
-        self._author_papers_list = MemoryEntityListStorage()
+    def with_memory_pending_papers(self) -> "HybridCacheBuilder":
+        self._pending_papers = MemoryPendingListStorage()
         return self
 
-    def with_redis_author_papers_list(self, prefix: str = "a2p_list") -> "HybridCacheBuilder":
-        self._author_papers_list = RedisEntityListStorage(self._redis, prefix)
+    def with_redis_pending_papers(self, prefix: str = "pending_a2p") -> "HybridCacheBuilder":
+        self._pending_papers = RedisPendingListStorage(self._redis, prefix)
         return self
 
-    def with_memory_paper_authors_list(self) -> "HybridCacheBuilder":
-        self._paper_authors_list = MemoryEntityListStorage()
+    def with_memory_pending_authors(self) -> "HybridCacheBuilder":
+        self._pending_authors = MemoryPendingListStorage()
         return self
 
-    def with_redis_paper_authors_list(self, prefix: str = "p2a_list") -> "HybridCacheBuilder":
-        self._paper_authors_list = RedisEntityListStorage(self._redis, prefix)
+    def with_redis_pending_authors(self, prefix: str = "pending_p2a") -> "HybridCacheBuilder":
+        self._pending_authors = RedisPendingListStorage(self._redis, prefix)
         return self
 
-    def with_memory_paper_references_list(self) -> "HybridCacheBuilder":
-        self._paper_references_list = MemoryEntityListStorage()
+    def with_memory_pending_references(self) -> "HybridCacheBuilder":
+        self._pending_references = MemoryPendingListStorage()
         return self
 
-    def with_redis_paper_references_list(self, prefix: str = "p2r_list") -> "HybridCacheBuilder":
-        self._paper_references_list = RedisEntityListStorage(self._redis, prefix)
+    def with_redis_pending_references(self, prefix: str = "pending_p2r") -> "HybridCacheBuilder":
+        self._pending_references = RedisPendingListStorage(self._redis, prefix)
         return self
 
-    def with_memory_paper_citations_list(self) -> "HybridCacheBuilder":
-        self._paper_citations_list = MemoryEntityListStorage()
+    def with_memory_pending_citations(self) -> "HybridCacheBuilder":
+        self._pending_citations = MemoryPendingListStorage()
         return self
 
-    def with_redis_paper_citations_list(self, prefix: str = "p2c_list") -> "HybridCacheBuilder":
-        self._paper_citations_list = RedisEntityListStorage(self._redis, prefix)
+    def with_redis_pending_citations(self, prefix: str = "pending_p2c") -> "HybridCacheBuilder":
+        self._pending_citations = RedisPendingListStorage(self._redis, prefix)
         return self
 
     # Convenience methods for setting all components at once
@@ -218,12 +218,12 @@ class HybridCacheBuilder:
                 .with_memory_paper_info()
                 .with_memory_author_registry()
                 .with_memory_author_info()
-                .with_memory_author_paper_links()
-                .with_memory_paper_reference_links()
-                .with_memory_author_papers_list()
-                .with_memory_paper_authors_list()
-                .with_memory_paper_references_list()
-                .with_memory_paper_citations_list())
+                .with_memory_committed_author_links()
+                .with_memory_committed_reference_links()
+                .with_memory_pending_papers()
+                .with_memory_pending_authors()
+                .with_memory_pending_references()
+                .with_memory_pending_citations())
 
     def with_all_redis(self, prefix: str = "pw") -> "HybridCacheBuilder":
         """Set all components to use Redis backend with given prefix."""
@@ -232,12 +232,12 @@ class HybridCacheBuilder:
                 .with_redis_paper_info(f"{prefix}:paper_info")
                 .with_redis_author_registry(f"{prefix}:author_reg")
                 .with_redis_author_info(f"{prefix}:author_info")
-                .with_redis_author_paper_links(f"{prefix}:ap_link")
-                .with_redis_paper_reference_links(f"{prefix}:pr_link")
-                .with_redis_author_papers_list(f"{prefix}:a2p_list")
-                .with_redis_paper_authors_list(f"{prefix}:p2a_list")
-                .with_redis_paper_references_list(f"{prefix}:p2r_list")
-                .with_redis_paper_citations_list(f"{prefix}:p2c_list"))
+                .with_redis_committed_author_links(f"{prefix}:committed_ap")
+                .with_redis_committed_reference_links(f"{prefix}:committed_pr")
+                .with_redis_pending_papers(f"{prefix}:pending_a2p")
+                .with_redis_pending_authors(f"{prefix}:pending_p2a")
+                .with_redis_pending_references(f"{prefix}:pending_p2r")
+                .with_redis_pending_citations(f"{prefix}:pending_p2c"))
 
     # Build methods
 
@@ -251,18 +251,18 @@ class HybridCacheBuilder:
             self._author_registry = MemoryIdentifierRegistry()
         if self._author_info is None:
             self._author_info = MemoryInfoStorage()
-        if self._author_paper_links is None:
-            self._author_paper_links = MemoryLinkStorage()
-        if self._paper_reference_links is None:
-            self._paper_reference_links = MemoryLinkStorage()
-        if self._author_papers_list is None:
-            self._author_papers_list = MemoryEntityListStorage()
-        if self._paper_authors_list is None:
-            self._paper_authors_list = MemoryEntityListStorage()
-        if self._paper_references_list is None:
-            self._paper_references_list = MemoryEntityListStorage()
-        if self._paper_citations_list is None:
-            self._paper_citations_list = MemoryEntityListStorage()
+        if self._committed_author_links is None:
+            self._committed_author_links = MemoryCommittedLinkStorage()
+        if self._committed_reference_links is None:
+            self._committed_reference_links = MemoryCommittedLinkStorage()
+        if self._pending_papers is None:
+            self._pending_papers = MemoryPendingListStorage()
+        if self._pending_authors is None:
+            self._pending_authors = MemoryPendingListStorage()
+        if self._pending_references is None:
+            self._pending_references = MemoryPendingListStorage()
+        if self._pending_citations is None:
+            self._pending_citations = MemoryPendingListStorage()
 
     def build_author_weaver_cache(self) -> FullAuthorWeaverCache:
         """Build a FullAuthorWeaverCache with configured components."""
@@ -272,9 +272,9 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            author_paper_links=self._author_paper_links,
-            author_papers_list=self._author_papers_list,
-            paper_authors_list=self._paper_authors_list,
+            committed_author_links=self._committed_author_links,
+            pending_papers=self._pending_papers,
+            pending_authors=self._pending_authors,
         )
 
     def build_paper_weaver_cache(self) -> FullPaperWeaverCache:
@@ -285,11 +285,11 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            author_paper_links=self._author_paper_links,
-            paper_reference_links=self._paper_reference_links,
-            paper_authors_list=self._paper_authors_list,
-            paper_references_list=self._paper_references_list,
-            paper_citations_list=self._paper_citations_list,
+            committed_author_links=self._committed_author_links,
+            committed_reference_links=self._committed_reference_links,
+            pending_authors=self._pending_authors,
+            pending_references=self._pending_references,
+            pending_citations=self._pending_citations,
         )
 
     def build_author2papers_cache(self) -> Author2PapersCache:
@@ -300,8 +300,8 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            author_paper_links=self._author_paper_links,
-            author_papers_list=self._author_papers_list,
+            committed_author_links=self._committed_author_links,
+            pending_papers=self._pending_papers,
         )
 
     def build_paper2authors_cache(self) -> Paper2AuthorsCache:
@@ -312,8 +312,8 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            author_paper_links=self._author_paper_links,
-            paper_authors_list=self._paper_authors_list,
+            committed_author_links=self._committed_author_links,
+            pending_authors=self._pending_authors,
         )
 
     def build_paper2references_cache(self) -> Paper2ReferencesCache:
@@ -324,8 +324,8 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            paper_reference_links=self._paper_reference_links,
-            paper_references_list=self._paper_references_list,
+            committed_reference_links=self._committed_reference_links,
+            pending_references=self._pending_references,
         )
 
     def build_paper2citations_cache(self) -> Paper2CitationsCache:
@@ -336,6 +336,6 @@ class HybridCacheBuilder:
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
             author_info_storage=self._author_info,
-            paper_reference_links=self._paper_reference_links,
-            paper_citations_list=self._paper_citations_list,
+            committed_reference_links=self._committed_reference_links,
+            pending_citations=self._pending_citations,
         )

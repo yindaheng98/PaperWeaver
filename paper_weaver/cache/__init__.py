@@ -8,8 +8,8 @@ Provides modular cache implementations with support for:
 Key concepts:
 - Identifier Registry: Manages object identity, merging objects with common identifiers
 - Info Storage: Stores entity information (dict data)
-- Link Storage: Stores relationships between entities
-- Composite Cache: Combines storage components into full cache implementations
+- Committed Link Storage: Tracks links that have been written to DataDst
+- Pending List Storage: Stores entity lists that may lack info, awaiting processing
 
 Usage:
     # Simple in-memory cache
@@ -29,9 +29,9 @@ Usage:
         .with_redis_paper_info("paper_info")
         .with_memory_author_registry()
         .with_redis_author_info("author_info")
-        .with_memory_author_paper_links()
-        .with_memory_author_papers_list()
-        .with_memory_paper_authors_list()
+        .with_memory_committed_author_links()
+        .with_memory_pending_papers()
+        .with_memory_pending_authors()
         .build_author_weaver_cache())
 """
 
@@ -48,22 +48,22 @@ from .info_storage import (
 
 # Link Storage
 from .link_storage import (
-    LinkStorageIface,
-    EntityListStorageIface,
+    CommittedLinkStorageIface,
+    PendingListStorageIface,
 )
 
 from .memory import (  # noqa: F401
     MemoryIdentifierRegistry,
     MemoryInfoStorage,
-    MemoryLinkStorage,
-    MemoryEntityListStorage,
+    MemoryCommittedLinkStorage,
+    MemoryPendingListStorage,
 )
 
 from .redis import (  # noqa: F401
     RedisIdentifierRegistry,
     RedisInfoStorage,
-    RedisLinkStorage,
-    RedisEntityListStorage,
+    RedisCommittedLinkStorage,
+    RedisPendingListStorage,
 )
 
 # Composite Cache
@@ -98,13 +98,14 @@ __all__ = [
     "MemoryInfoStorage",
     "RedisInfoStorage",
     "EntityInfoManager",
-    # Link Storage
-    "LinkStorageIface",
-    "MemoryLinkStorage",
-    "RedisLinkStorage",
-    "EntityListStorageIface",
-    "MemoryEntityListStorage",
-    "RedisEntityListStorage",
+    # Committed Link Storage
+    "CommittedLinkStorageIface",
+    "MemoryCommittedLinkStorage",
+    "RedisCommittedLinkStorage",
+    # Pending List Storage
+    "PendingListStorageIface",
+    "MemoryPendingListStorage",
+    "RedisPendingListStorage",
     # Composite Cache
     "ComposableCacheBase",
     "AuthorLinkCache",

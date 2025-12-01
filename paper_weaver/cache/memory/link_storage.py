@@ -1,18 +1,15 @@
 """
-Link Storage - Stores relationships between entities.
-
-Separated from info storage for flexible composition.
-Relationships are stored using canonical IDs.
+Memory implementations for link tracking and pending entity lists.
 """
 
 from typing import Set, Optional, List
 import asyncio
 
-from ..link_storage import LinkStorageIface, EntityListStorageIface
+from ..link_storage import CommittedLinkStorageIface, PendingListStorageIface
 
 
-class MemoryLinkStorage(LinkStorageIface):
-    """In-memory link storage using dict of sets."""
+class MemoryCommittedLinkStorage(CommittedLinkStorageIface):
+    """In-memory storage for committed links."""
 
     def __init__(self):
         self._links: dict[str, Set[str]] = {}
@@ -29,8 +26,8 @@ class MemoryLinkStorage(LinkStorageIface):
             return from_id in self._links and to_id in self._links[from_id]
 
 
-class MemoryEntityListStorage(EntityListStorageIface):
-    """In-memory entity list storage."""
+class MemoryPendingListStorage(PendingListStorageIface):
+    """In-memory storage for pending entity lists."""
 
     def __init__(self):
         self._data: dict[str, List[Set[str]]] = {}
@@ -42,6 +39,6 @@ class MemoryEntityListStorage(EntityListStorageIface):
                 return None
             return [set(s) for s in self._data[from_id]]
 
-    async def add_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
         async with self._lock:
             self._data[from_id] = [set(s) for s in items]

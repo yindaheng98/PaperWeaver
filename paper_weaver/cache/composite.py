@@ -4,10 +4,15 @@ Composite Cache - Combines storage components into full cache implementations.
 Allows flexible composition of different storage backends for:
 - Identifier registry (memory/redis)
 - Info storage (memory/redis)
-- Link storage (memory/redis)
+- Committed link storage (memory/redis)
+- Pending list storage (memory/redis)
+
+Key concepts:
+- Committed links: Links that have been written to DataDst
+- Pending lists: Entity lists that may not have info yet, awaiting processing
 """
 
-from typing import AsyncIterator, List, Tuple, Optional
+from typing import AsyncIterator, Tuple
 
 from ..dataclass import Paper, Author
 from ..iface import WeaverCacheIface
@@ -19,7 +24,7 @@ from ..iface_p2r import Paper2ReferencesWeaverCacheIface
 
 from .identifier import IdentifierRegistryIface
 from .info_storage import InfoStorageIface, EntityInfoManager
-from .link_storage import LinkStorageIface, EntityListStorageIface
+from .link_storage import CommittedLinkStorageIface, PendingListStorageIface
 
 
 class ComposableCacheBase(WeaverCacheIface):
@@ -90,10 +95,10 @@ class ComposableCacheBase(WeaverCacheIface):
 
 class AuthorLinkCache(ComposableCacheBase, AuthorLinkWeaverCacheIface):
     """
-    Cache with author-paper link storage.
+    Cache with author-paper committed link tracking.
 
     Additional components:
-    - author_paper_links: Link storage for paper -> author relationships
+    - committed_author_links: Storage for tracking paper-author links written to DataDst
     """
 
     def __init__(
@@ -102,10 +107,10 @@ class AuthorLinkCache(ComposableCacheBase, AuthorLinkWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        author_paper_links: LinkStorageIface,
+        committed_author_links: CommittedLinkStorageIface,
     ):
         super().__init__(paper_registry, paper_info_storage, author_registry, author_info_storage)
-        self._author_paper_links = author_paper_links
+        self._committed_author_links = committed_author_links
 
     async def _get_paper_canonical_id(self, paper: Paper) -> str:
         """Get or create canonical ID for paper."""
@@ -119,25 +124,25 @@ class AuthorLinkCache(ComposableCacheBase, AuthorLinkWeaverCacheIface):
         author.identifiers = all_identifiers
         return canonical_id
 
-    async def is_link_author(self, paper: Paper, author: Author) -> bool:
-        """Check if author is linked to paper."""
+    async def is_author_link_committed(self, paper: Paper, author: Author) -> bool:
+        """Check if paper-author link has been committed to DataDst."""
         paper_cid = await self._get_paper_canonical_id(paper)
         author_cid = await self._get_author_canonical_id(author)
-        return await self._author_paper_links.has_link(paper_cid, author_cid)
+        return await self._committed_author_links.has_link(paper_cid, author_cid)
 
-    async def link_author(self, paper: Paper, author: Author) -> None:
-        """Link author to paper."""
+    async def commit_author_link(self, paper: Paper, author: Author) -> None:
+        """Mark paper-author link as committed to DataDst."""
         paper_cid = await self._get_paper_canonical_id(paper)
         author_cid = await self._get_author_canonical_id(author)
-        await self._author_paper_links.add_link(paper_cid, author_cid)
+        await self._committed_author_links.add_link(paper_cid, author_cid)
 
 
 class PaperLinkCache(ComposableCacheBase, PaperLinkWeaverCacheIface):
     """
-    Cache with paper-paper link storage (references/citations).
+    Cache with paper-paper committed link tracking (references/citations).
 
     Additional components:
-    - paper_reference_links: Link storage for paper -> reference relationships
+    - committed_reference_links: Storage for tracking paper-reference links written to DataDst
     """
 
     def __init__(
@@ -146,10 +151,10 @@ class PaperLinkCache(ComposableCacheBase, PaperLinkWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        paper_reference_links: LinkStorageIface,
+        committed_reference_links: CommittedLinkStorageIface,
     ):
         super().__init__(paper_registry, paper_info_storage, author_registry, author_info_storage)
-        self._paper_reference_links = paper_reference_links
+        self._committed_reference_links = committed_reference_links
 
     async def _get_paper_canonical_id(self, paper: Paper) -> str:
         """Get or create canonical ID for paper."""
@@ -157,19 +162,19 @@ class PaperLinkCache(ComposableCacheBase, PaperLinkWeaverCacheIface):
         paper.identifiers = all_identifiers
         return canonical_id
 
-    async def is_link_reference(self, paper: Paper, reference: Paper) -> bool:
-        """Check if reference is linked to paper."""
+    async def is_reference_link_committed(self, paper: Paper, reference: Paper) -> bool:
+        """Check if paper-reference link has been committed to DataDst."""
         paper_cid = await self._get_paper_canonical_id(paper)
         ref_cid = await self._get_paper_canonical_id(reference)
-        return await self._paper_reference_links.has_link(paper_cid, ref_cid)
+        return await self._committed_reference_links.has_link(paper_cid, ref_cid)
 
-    async def link_reference(self, paper: Paper, reference: Paper) -> None:
-        """Link reference to paper."""
+    async def commit_reference_link(self, paper: Paper, reference: Paper) -> None:
+        """Mark paper-reference link as committed to DataDst."""
         paper_cid = await self._get_paper_canonical_id(paper)
         ref_cid = await self._get_paper_canonical_id(reference)
-        await self._paper_reference_links.add_link(paper_cid, ref_cid)
+        await self._committed_reference_links.add_link(paper_cid, ref_cid)
 
-    # is_link_citation and link_citation inherited from PaperLinkWeaverCacheIface
+    # is_citation_link_committed and commit_citation_link inherited from PaperLinkWeaverCacheIface
 
 
 class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
@@ -177,7 +182,7 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
     Cache for author -> papers relationships.
 
     Additional components:
-    - author_papers_list: Entity list storage for author's papers
+    - pending_papers: Storage for author's pending papers (may lack info)
     """
 
     def __init__(
@@ -186,20 +191,20 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        author_paper_links: LinkStorageIface,
-        author_papers_list: EntityListStorageIface,
+        committed_author_links: CommittedLinkStorageIface,
+        pending_papers: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
             author_registry, author_info_storage,
-            author_paper_links
+            committed_author_links
         )
-        self._author_papers_list = author_papers_list
+        self._pending_papers = pending_papers
 
-    async def get_papers_by_author(self, author: Author) -> list[Paper] | None:
-        """Get papers by author, registering them if found."""
+    async def get_pending_papers(self, author: Author) -> list[Paper] | None:
+        """Get pending papers for author, registering them if found."""
         author_cid = await self._get_author_canonical_id(author)
-        paper_id_sets = await self._author_papers_list.get_list(author_cid)
+        paper_id_sets = await self._pending_papers.get_list(author_cid)
         if paper_id_sets is None:
             return None
 
@@ -210,8 +215,8 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
             papers.append(Paper(identifiers=all_identifiers))
         return papers
 
-    async def add_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
-        """Set papers for author."""
+    async def set_pending_papers(self, author: Author, papers: list[Paper]) -> None:
+        """Set pending papers for author (registers them for later processing)."""
         author_cid = await self._get_author_canonical_id(author)
 
         # Register each paper and store their identifier sets
@@ -221,7 +226,7 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
             paper.identifiers = all_identifiers
             paper_id_sets.append(all_identifiers)
 
-        await self._author_papers_list.add_list(author_cid, paper_id_sets)
+        await self._pending_papers.set_list(author_cid, paper_id_sets)
 
 
 class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
@@ -229,7 +234,7 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
     Cache for paper -> authors relationships.
 
     Additional components:
-    - paper_authors_list: Entity list storage for paper's authors
+    - pending_authors: Storage for paper's pending authors (may lack info)
     """
 
     def __init__(
@@ -238,20 +243,20 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        author_paper_links: LinkStorageIface,
-        paper_authors_list: EntityListStorageIface,
+        committed_author_links: CommittedLinkStorageIface,
+        pending_authors: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
             author_registry, author_info_storage,
-            author_paper_links
+            committed_author_links
         )
-        self._paper_authors_list = paper_authors_list
+        self._pending_authors = pending_authors
 
-    async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
-        """Get authors by paper, registering them if found."""
+    async def get_pending_authors(self, paper: Paper) -> list[Author] | None:
+        """Get pending authors for paper, registering them if found."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        author_id_sets = await self._paper_authors_list.get_list(paper_cid)
+        author_id_sets = await self._pending_authors.get_list(paper_cid)
         if author_id_sets is None:
             return None
 
@@ -261,8 +266,8 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
             authors.append(Author(identifiers=all_identifiers))
         return authors
 
-    async def add_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
-        """Set authors for paper."""
+    async def set_pending_authors(self, paper: Paper, authors: list[Author]) -> None:
+        """Set pending authors for paper (registers them for later processing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
         author_id_sets = []
@@ -271,7 +276,7 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
             author.identifiers = all_identifiers
             author_id_sets.append(all_identifiers)
 
-        await self._paper_authors_list.add_list(paper_cid, author_id_sets)
+        await self._pending_authors.set_list(paper_cid, author_id_sets)
 
 
 class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
@@ -279,7 +284,7 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
     Cache for paper -> references relationships.
 
     Additional components:
-    - paper_references_list: Entity list storage for paper's references
+    - pending_references: Storage for paper's pending references (may lack info)
     """
 
     def __init__(
@@ -288,20 +293,20 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        paper_reference_links: LinkStorageIface,
-        paper_references_list: EntityListStorageIface,
+        committed_reference_links: CommittedLinkStorageIface,
+        pending_references: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
             author_registry, author_info_storage,
-            paper_reference_links
+            committed_reference_links
         )
-        self._paper_references_list = paper_references_list
+        self._pending_references = pending_references
 
-    async def get_references_by_paper(self, paper: Paper) -> list[Paper] | None:
-        """Get references by paper, registering them if found."""
+    async def get_pending_references(self, paper: Paper) -> list[Paper] | None:
+        """Get pending references for paper, registering them if found."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        ref_id_sets = await self._paper_references_list.get_list(paper_cid)
+        ref_id_sets = await self._pending_references.get_list(paper_cid)
         if ref_id_sets is None:
             return None
 
@@ -311,8 +316,8 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
             refs.append(Paper(identifiers=all_identifiers))
         return refs
 
-    async def add_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
-        """Set references for paper."""
+    async def set_pending_references(self, paper: Paper, references: list[Paper]) -> None:
+        """Set pending references for paper (registers them for later processing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
         ref_id_sets = []
@@ -321,7 +326,7 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
             ref.identifiers = all_identifiers
             ref_id_sets.append(all_identifiers)
 
-        await self._paper_references_list.add_list(paper_cid, ref_id_sets)
+        await self._pending_references.set_list(paper_cid, ref_id_sets)
 
 
 class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
@@ -329,7 +334,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
     Cache for paper -> citations relationships.
 
     Additional components:
-    - paper_citations_list: Entity list storage for paper's citations
+    - pending_citations: Storage for paper's pending citations (may lack info)
     """
 
     def __init__(
@@ -338,20 +343,20 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        paper_reference_links: LinkStorageIface,
-        paper_citations_list: EntityListStorageIface,
+        committed_reference_links: CommittedLinkStorageIface,
+        pending_citations: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
             author_registry, author_info_storage,
-            paper_reference_links
+            committed_reference_links
         )
-        self._paper_citations_list = paper_citations_list
+        self._pending_citations = pending_citations
 
-    async def get_citations_by_paper(self, paper: Paper) -> list[Paper] | None:
-        """Get citations by paper, registering them if found."""
+    async def get_pending_citations(self, paper: Paper) -> list[Paper] | None:
+        """Get pending citations for paper, registering them if found."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        cit_id_sets = await self._paper_citations_list.get_list(paper_cid)
+        cit_id_sets = await self._pending_citations.get_list(paper_cid)
         if cit_id_sets is None:
             return None
 
@@ -361,8 +366,8 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             cits.append(Paper(identifiers=all_identifiers))
         return cits
 
-    async def add_citations_of_paper(self, paper: Paper, citations: list[Paper]) -> None:
-        """Set citations for paper."""
+    async def set_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
+        """Set pending citations for paper (registers them for later processing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
         cit_id_sets = []
@@ -371,7 +376,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             cit.identifiers = all_identifiers
             cit_id_sets.append(all_identifiers)
 
-        await self._paper_citations_list.add_list(paper_cid, cit_id_sets)
+        await self._pending_citations.set_list(paper_cid, cit_id_sets)
 
 
 class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):
@@ -387,9 +392,9 @@ class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        author_paper_links: LinkStorageIface,
-        author_papers_list: EntityListStorageIface,
-        paper_authors_list: EntityListStorageIface,
+        committed_author_links: CommittedLinkStorageIface,
+        pending_papers: PendingListStorageIface,
+        pending_authors: PendingListStorageIface,
     ):
         # Initialize base with shared components
         ComposableCacheBase.__init__(
@@ -397,9 +402,9 @@ class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):
             paper_registry, paper_info_storage,
             author_registry, author_info_storage
         )
-        self._author_paper_links = author_paper_links
-        self._author_papers_list = author_papers_list
-        self._paper_authors_list = paper_authors_list
+        self._committed_author_links = committed_author_links
+        self._pending_papers = pending_papers
+        self._pending_authors = pending_authors
 
 
 class FullPaperWeaverCache(Paper2ReferencesCache, Paper2CitationsCache, Paper2AuthorsCache):
@@ -413,19 +418,19 @@ class FullPaperWeaverCache(Paper2ReferencesCache, Paper2CitationsCache, Paper2Au
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
-        author_paper_links: LinkStorageIface,
-        paper_reference_links: LinkStorageIface,
-        paper_authors_list: EntityListStorageIface,
-        paper_references_list: EntityListStorageIface,
-        paper_citations_list: EntityListStorageIface,
+        committed_author_links: CommittedLinkStorageIface,
+        committed_reference_links: CommittedLinkStorageIface,
+        pending_authors: PendingListStorageIface,
+        pending_references: PendingListStorageIface,
+        pending_citations: PendingListStorageIface,
     ):
         ComposableCacheBase.__init__(
             self,
             paper_registry, paper_info_storage,
             author_registry, author_info_storage
         )
-        self._author_paper_links = author_paper_links
-        self._paper_reference_links = paper_reference_links
-        self._paper_authors_list = paper_authors_list
-        self._paper_references_list = paper_references_list
-        self._paper_citations_list = paper_citations_list
+        self._committed_author_links = committed_author_links
+        self._committed_reference_links = committed_reference_links
+        self._pending_authors = pending_authors
+        self._pending_references = pending_references
+        self._pending_citations = pending_citations

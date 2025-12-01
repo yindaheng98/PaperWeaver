@@ -1,19 +1,16 @@
 """
-Link Storage - Stores relationships between entities.
-
-Separated from info storage for flexible composition.
-Relationships are stored using canonical IDs.
+Redis implementations for link tracking and pending entity lists.
 """
 
 from typing import Set, Optional, List
 
-from ..link_storage import LinkStorageIface, EntityListStorageIface
+from ..link_storage import CommittedLinkStorageIface, PendingListStorageIface
 
 
-class RedisLinkStorage(LinkStorageIface):
-    """Redis link storage using sets."""
+class RedisCommittedLinkStorage(CommittedLinkStorageIface):
+    """Redis storage for committed links using sets."""
 
-    def __init__(self, redis_client, prefix: str = "link"):
+    def __init__(self, redis_client, prefix: str = "committed"):
         self._redis = redis_client
         self._prefix = prefix
 
@@ -27,10 +24,10 @@ class RedisLinkStorage(LinkStorageIface):
         return await self._redis.sismember(self._key(from_id), to_id)
 
 
-class RedisEntityListStorage(EntityListStorageIface):
-    """Redis entity list storage using JSON."""
+class RedisPendingListStorage(PendingListStorageIface):
+    """Redis storage for pending entity lists using JSON."""
 
-    def __init__(self, redis_client, prefix: str = "elist"):
+    def __init__(self, redis_client, prefix: str = "pending"):
         self._redis = redis_client
         self._prefix = prefix
 
@@ -46,7 +43,7 @@ class RedisEntityListStorage(EntityListStorageIface):
         items = json.loads(data)
         return [set(item) for item in items]
 
-    async def add_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
         import json
         # Convert sets to lists for JSON serialization
         data = [list(s) for s in items]
