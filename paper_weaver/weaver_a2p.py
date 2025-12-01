@@ -1,30 +1,20 @@
-from abc import ABCMeta
 import asyncio
 import logging
 from .dataclass import DataSrc, DataDst
+from .iface import SimpleWeaver
 from .iface_a2p import Author2PapersWeaverIface, Author2PapersWeaverCacheIface
 from .iface_p2a import Paper2AuthorsWeaverIface, Paper2AuthorsWeaverCacheIface
 
 
-class AuthorWeaverCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface, metaclass=ABCMeta):
+class AuthorWeaverCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface):
     pass
 
 
-class AuthorWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface):
+class AuthorWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface, SimpleWeaver):
     logger = logging.getLogger("AuthorWeaver")
 
     def __init__(self, src: DataSrc, dst: DataDst, cache: AuthorWeaverCache):
-        self._src = src
-        self._dst = dst
-        self._cache = cache
-
-    @property
-    def src(self) -> DataSrc:
-        return self._src
-
-    @property
-    def dst(self) -> DataDst:
-        return self._dst
+        super().__init__(src=src, dst=dst, cache=cache)
 
     @property
     def cache(self) -> AuthorWeaverCache:

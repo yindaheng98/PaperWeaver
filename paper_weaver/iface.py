@@ -48,3 +48,24 @@ class WeaverIface(metaclass=ABCMeta):
     @abstractmethod
     def cache(self) -> WeaverCacheIface:
         raise ValueError("Cache is not set")
+
+
+class SimpleWeaver(WeaverIface):
+    """A simple WeaverIface implementation with given src, dst, cache."""
+
+    def __init__(self, src: DataSrc, dst: DataDst, cache: WeaverCacheIface):
+        self._src = src
+        self._dst = dst
+        self._cache = cache
+
+    @property
+    def src(self) -> DataSrc:
+        return self._src
+
+    @property
+    def dst(self) -> DataDst:
+        return self._dst
+
+    @property
+    def cache(self) -> WeaverCacheIface:
+        return self._cache
