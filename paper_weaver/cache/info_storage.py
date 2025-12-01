@@ -1,0 +1,153 @@
+"""
+Info Storage - Stores entity information (dict data).
+
+Separated from relationship storage for flexible composition.
+"""
+
+from abc import ABCMeta, abstractmethod
+from typing import Dict, Optional, Set
+import json
+import asyncio
+
+from .identifier import IdentifierRegistryIface
+
+
+class InfoStorageIface(metaclass=ABCMeta):
+    """Interface for storing entity info by canonical ID."""
+
+    @abstractmethod
+    async def get_info(self, canonical_id: str) -> Optional[dict]:
+        """Get info for a canonical ID. Returns None if not found."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_info(self, canonical_id: str, info: dict) -> None:
+        """Set info for a canonical ID."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def has_info(self, canonical_id: str) -> bool:
+        """Check if info exists for a canonical ID."""
+        raise NotImplementedError
+
+
+class MemoryInfoStorage(InfoStorageIface):
+    """In-memory info storage using dict."""
+
+    def __init__(self):
+        self._data: Dict[str, dict] = {}
+        self._lock = asyncio.Lock()
+
+    async def get_info(self, canonical_id: str) -> Optional[dict]:
+        async with self._lock:
+            return self._data.get(canonical_id)
+
+    async def set_info(self, canonical_id: str, info: dict) -> None:
+        async with self._lock:
+            self._data[canonical_id] = info
+
+    async def has_info(self, canonical_id: str) -> bool:
+        async with self._lock:
+            return canonical_id in self._data
+
+
+class RedisInfoStorage(InfoStorageIface):
+    """Redis info storage."""
+
+    def __init__(self, redis_client, prefix: str = "info"):
+        self._redis = redis_client
+        self._prefix = prefix
+
+    def _key(self, canonical_id: str) -> str:
+        return f"{self._prefix}:{canonical_id}"
+
+    async def get_info(self, canonical_id: str) -> Optional[dict]:
+        result = await self._redis.get(self._key(canonical_id))
+        if result is None:
+            return None
+        data = result.decode() if isinstance(result, bytes) else result
+        return json.loads(data)
+
+    async def set_info(self, canonical_id: str, info: dict) -> None:
+        await self._redis.set(self._key(canonical_id), json.dumps(info))
+
+    async def has_info(self, canonical_id: str) -> bool:
+        return await self._redis.exists(self._key(canonical_id)) > 0
+
+
+class EntityInfoManager:
+    """
+    Manages entity info with identifier registry integration.
+
+    Handles:
+    - Identifier registration and merging
+    - Info storage and retrieval
+    - Keeping identifiers synchronized
+    """
+
+    def __init__(
+        self,
+        identifier_registry: IdentifierRegistryIface,
+        info_storage: InfoStorageIface
+    ):
+        self._registry = identifier_registry
+        self._storage = info_storage
+
+    async def get_info(self, identifiers: Set[str], merge_identifiers: bool = True) -> tuple[str | None, Set[str], dict | None]:
+        """
+        Get info for an entity by its identifiers.
+
+        Args:
+            identifiers: Set of identifiers to look up
+            merge_identifiers: If True, merge provided identifiers with existing ones
+
+        Returns: (canonical_id, all_identifiers, info)
+        - canonical_id: None if not registered
+        - all_identifiers: All known identifiers (merged set)
+        - info: None if not stored
+        """
+        canonical_id = await self._registry.get_canonical_id(identifiers)
+        if canonical_id is None:
+            return None, identifiers, None
+
+        # Merge the provided identifiers with existing ones to keep them synchronized
+        if merge_identifiers:
+            canonical_id = await self._registry.register(identifiers)
+
+        all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+        info = await self._storage.get_info(canonical_id)
+        return canonical_id, all_identifiers, info
+
+    async def set_info(self, identifiers: Set[str], info: dict) -> tuple[str, Set[str]]:
+        """
+        Set info for an entity.
+
+        Returns: (canonical_id, all_identifiers)
+        """
+        canonical_id = await self._registry.register(identifiers)
+        await self._storage.set_info(canonical_id, info)
+        all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+        return canonical_id, all_identifiers
+
+    async def register_identifiers(self, identifiers: Set[str]) -> tuple[str, Set[str]]:
+        """
+        Register identifiers without setting info.
+
+        Returns: (canonical_id, all_identifiers)
+        """
+        canonical_id = await self._registry.register(identifiers)
+        all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+        return canonical_id, all_identifiers
+
+    async def iterate_entities(self):
+        """Async iterator yielding (canonical_id, all_identifiers) for all registered entities."""
+        async for canonical_id in self._registry.iterate_canonical_ids():
+            all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+            yield canonical_id, all_identifiers
+
+    async def iterate_entities_without_info(self):
+        """Async iterator yielding (canonical_id, all_identifiers) for entities without info."""
+        async for canonical_id in self._registry.iterate_canonical_ids():
+            if not await self._storage.has_info(canonical_id):
+                all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+                yield canonical_id, all_identifiers
