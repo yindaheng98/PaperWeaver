@@ -23,11 +23,6 @@ class InfoStorageIface(metaclass=ABCMeta):
         """Set info for a canonical ID."""
         raise NotImplementedError
 
-    @abstractmethod
-    async def has_info(self, canonical_id: str) -> bool:
-        """Check if info exists for a canonical ID."""
-        raise NotImplementedError
-
 
 class EntityInfoManager:
     """
@@ -98,10 +93,3 @@ class EntityInfoManager:
         async for canonical_id in self._registry.iterate_canonical_ids():
             all_identifiers = await self._registry.get_all_identifiers(canonical_id)
             yield canonical_id, all_identifiers
-
-    async def iterate_entities_without_info(self):
-        """Async iterator yielding (canonical_id, all_identifiers) for entities without info."""
-        async for canonical_id in self._registry.iterate_canonical_ids():
-            if not await self._storage.has_info(canonical_id):
-                all_identifiers = await self._registry.get_all_identifiers(canonical_id)
-                yield canonical_id, all_identifiers

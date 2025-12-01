@@ -76,7 +76,7 @@ class ComposableCacheBase(WeaverCacheIface):
         return self._iterate_papers_impl()
 
     async def _iterate_papers_impl(self) -> AsyncIterator[Paper]:
-        async for canonical_id, identifiers in self._paper_manager.iterate_entities_without_info():
+        async for canonical_id, identifiers in self._paper_manager.iterate_entities():
             yield Paper(identifiers=identifiers)
 
     def iterate_authors(self) -> AsyncIterator[Author]:
@@ -84,7 +84,7 @@ class ComposableCacheBase(WeaverCacheIface):
         return self._iterate_authors_impl()
 
     async def _iterate_authors_impl(self) -> AsyncIterator[Author]:
-        async for canonical_id, identifiers in self._author_manager.iterate_entities_without_info():
+        async for canonical_id, identifiers in self._author_manager.iterate_entities():
             yield Author(identifiers=identifiers)
 
 
