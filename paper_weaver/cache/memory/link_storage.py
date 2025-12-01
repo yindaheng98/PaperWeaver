@@ -15,13 +15,13 @@ class MemoryCommittedLinkStorage(CommittedLinkStorageIface):
         self._links: dict[str, Set[str]] = {}
         self._lock = asyncio.Lock()
 
-    async def add_link(self, from_id: str, to_id: str) -> None:
+    async def commit_link(self, from_id: str, to_id: str) -> None:
         async with self._lock:
             if from_id not in self._links:
                 self._links[from_id] = set()
             self._links[from_id].add(to_id)
 
-    async def has_link(self, from_id: str, to_id: str) -> bool:
+    async def is_link_committed(self, from_id: str, to_id: str) -> bool:
         async with self._lock:
             return from_id in self._links and to_id in self._links[from_id]
 
@@ -33,12 +33,12 @@ class MemoryPendingListStorage(PendingListStorageIface):
         self._data: dict[str, List[Set[str]]] = {}
         self._lock = asyncio.Lock()
 
-    async def get_list(self, from_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_id: str) -> Optional[List[Set[str]]]:
         async with self._lock:
             if from_id not in self._data:
                 return None
             return [set(s) for s in self._data[from_id]]
 
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_pending_identifier_sets(self, from_id: str, items: List[Set[str]]) -> None:
         async with self._lock:
             self._data[from_id] = [set(s) for s in items]

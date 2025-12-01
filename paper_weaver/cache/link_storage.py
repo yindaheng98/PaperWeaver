@@ -24,12 +24,12 @@ class CommittedLinkStorageIface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def add_link(self, from_id: str, to_id: str) -> None:
+    async def commit_link(self, from_id: str, to_id: str) -> None:
         """Mark a link as committed."""
         raise NotImplementedError
 
     @abstractmethod
-    async def has_link(self, from_id: str, to_id: str) -> bool:
+    async def is_link_committed(self, from_id: str, to_id: str) -> bool:
         """Check if a link has been committed."""
         raise NotImplementedError
 
@@ -47,7 +47,7 @@ class PendingListStorageIface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def get_list(self, from_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_id: str) -> Optional[List[Set[str]]]:
         """
         Get list of pending entity identifier sets.
         Returns None if not set (vs empty list if explicitly set empty).
@@ -55,7 +55,7 @@ class PendingListStorageIface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_pending_identifier_sets(self, from_id: str, items: List[Set[str]]) -> None:
         """Set the list of pending entity identifier sets."""
         raise NotImplementedError
 
@@ -87,7 +87,7 @@ class PendingListManager:
         self._registry = entity_registry
         self._storage = pending_storage
 
-    async def _get_dict(self, from_canonical_id: str) -> Optional[Dict[str, Set[str]]]:
+    async def get_pending_canonical_id_identifier_set_dict(self, from_canonical_id: str) -> Optional[Dict[str, Set[str]]]:
         """
         Get pending entity list in the form of a dictionary (canonical_id -> identifiers), merging identifiers for each entity.
 
@@ -100,7 +100,7 @@ class PendingListManager:
         Returns:
             List of identifier sets (one per entity), or None if not set
         """
-        identifiers_list = await self._storage.get_list(from_canonical_id)
+        identifiers_list = await self._storage.get_pending_identifier_sets(from_canonical_id)
         if identifiers_list is None:
             return None
 
@@ -111,7 +111,7 @@ class PendingListManager:
             result[canonical_id] = all_identifiers
         return result
 
-    async def get_list(self, from_canonical_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_canonical_id: str) -> Optional[List[Set[str]]]:
         """
         Get pending entity list, merging identifiers for each entity.
 
@@ -124,12 +124,12 @@ class PendingListManager:
         Returns:
             List of identifier sets (one per entity), or None if not set
         """
-        result = await self._get_dict(from_canonical_id)
+        result = await self.get_pending_canonical_id_identifier_set_dict(from_canonical_id)
         if result is None:
             return None
         return list(result.values())
 
-    async def set_list(self, from_canonical_id: str, identifiers_list: List[Set[str]]) -> List[Set[str]]:
+    async def set_pending_identifier_sets(self, from_canonical_id: str, identifiers_list: List[Set[str]]) -> List[Set[str]]:
         """
         Set pending entity list, registering each entity.
 
@@ -143,7 +143,7 @@ class PendingListManager:
         Returns:
             List of merged identifier sets (with any existing identifiers)
         """
-        result = await self._get_dict(from_canonical_id)
+        result = await self.get_pending_canonical_id_identifier_set_dict(from_canonical_id)
         if result is None:
             result = {}
         registered_sets = []
@@ -153,5 +153,5 @@ class PendingListManager:
             result[canonical_id] = all_identifiers
 
         registered_sets = list(result.values())
-        await self._storage.set_list(from_canonical_id, registered_sets)
+        await self._storage.set_pending_identifier_sets(from_canonical_id, registered_sets)
         return registered_sets

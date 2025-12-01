@@ -17,10 +17,10 @@ class RedisCommittedLinkStorage(CommittedLinkStorageIface):
     def _key(self, from_id: str) -> str:
         return f"{self._prefix}:{from_id}"
 
-    async def add_link(self, from_id: str, to_id: str) -> None:
+    async def commit_link(self, from_id: str, to_id: str) -> None:
         await self._redis.sadd(self._key(from_id), to_id)
 
-    async def has_link(self, from_id: str, to_id: str) -> bool:
+    async def is_link_committed(self, from_id: str, to_id: str) -> bool:
         return await self._redis.sismember(self._key(from_id), to_id)
 
 
@@ -34,7 +34,7 @@ class RedisPendingListStorage(PendingListStorageIface):
     def _key(self, from_id: str) -> str:
         return f"{self._prefix}:{from_id}"
 
-    async def get_list(self, from_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_id: str) -> Optional[List[Set[str]]]:
         import json
         result = await self._redis.get(self._key(from_id))
         if result is None:
@@ -43,7 +43,7 @@ class RedisPendingListStorage(PendingListStorageIface):
         items = json.loads(data)
         return [set(item) for item in items]
 
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_pending_identifier_sets(self, from_id: str, items: List[Set[str]]) -> None:
         import json
         # Convert sets to lists for JSON serialization
         data = [list(s) for s in items]
