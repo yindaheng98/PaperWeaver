@@ -158,11 +158,10 @@ class AuthorWeaver:
         async for author in self.cache.iterate_authors():
             tasks.append(self._process_author_with_papers(author))
         self.logger.info(f"Fetching papers from {len(tasks)} new authors")
-        success = await asyncio.gather(*tasks)
-        succ_count = sum([1 for s in success if s > 0])
-        fail_count = sum([1 for s in success if s <= 0])
-        fetched_count = sum(success)
-        self.logger.info(f"Found {fetched_count} papers from {succ_count} authors. {fail_count} authors do not have new papers.")
+        state = await asyncio.gather(*tasks)
+        author_succ_count, author_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
+        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
+        self.logger.info(f"Found {paper_succ_count} new papers from {author_succ_count} authors. {paper_fail_count} papers fetch failed. {author_fail_count} authors fetch failed.")
 
         tasks = []
         async for paper in self.cache.iterate_papers():
