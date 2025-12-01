@@ -19,7 +19,6 @@ class PendingListStorageIface(metaclass=ABCMeta):
     Used for: paper's authors, author's papers, paper's references, paper's citations.
     These entities may not have info yet and are pending processing.
     Each entity in the list is represented by a set of identifiers.
-    Order is preserved (e.g., author order matters in papers).
 
     For high-level usage with identifier registration, use PendingListManager.
     """
@@ -50,8 +49,8 @@ class PendingListManager:
     Usage:
         manager = PendingListManager(paper_registry, pending_storage)
 
-        # Set pending papers for an author
-        registered_sets = await manager.set_pending_identifier_sets(author_cid, [p.identifiers for p in papers])
+        # Add pending papers for an author
+        registered_sets = await manager.add_pending_identifier_sets(author_cid, [p.identifiers for p in papers])
 
         # Get pending papers for an author
         id_sets = await manager.get_pending_identifier_sets(author_cid)
@@ -109,11 +108,15 @@ class PendingListManager:
 
     async def add_pending_identifier_sets(self, from_canonical_id: str, identifiers_list: list[set[str]]) -> list[set[str]]:
         """
-        Set pending entity list, registering each entity and merging with existing entries.
+        Add pending entities to the list, registering each entity and merging with existing entries.
 
         Each entity's identifiers are registered, making them discoverable
         via the registry's iteration. If there are existing pending entries,
-        new entries are merged (deduplicated by canonical ID).
+        new entries are merged by canonical ID (deduplicated).
+
+        Note: Order is preserved for existing entries. New entries that share a
+        canonical ID with existing ones will merge their identifiers but keep
+        the original position. Completely new entries are appended at the end.
 
         Args:
             from_canonical_id: The canonical ID of the source entity
