@@ -7,7 +7,7 @@ using either memory or Redis backends.
 
 from .memory import MemoryIdentifierRegistry, MemoryInfoStorage, MemoryCommittedLinkStorage, MemoryPendingListStorage
 from .redis import RedisIdentifierRegistry, RedisInfoStorage, RedisCommittedLinkStorage, RedisPendingListStorage
-from .composite import (
+from .impl_full import (
     FullAuthorWeaverCache,
     FullPaperWeaverCache,
     Author2PapersCache,

@@ -72,16 +72,28 @@ from .redis import (  # noqa: F401
 )
 
 # Composite Cache
-from .composite import (
-    ComposableCacheBase,
-    AuthorLinkCache,
-    PaperLinkCache,
-    Author2PapersCache,
-    Paper2AuthorsCache,
-    Paper2ReferencesCache,
-    Paper2CitationsCache,
+from .impl_full import (
     FullAuthorWeaverCache,
     FullPaperWeaverCache,
+)
+from .impl import (  # noqa: F401
+    ComposableCacheBase,
+)
+from .impl_link import (  # noqa: F401
+    AuthorLinkCache,
+    PaperLinkCache,
+)
+from .impl_a2p import (  # noqa: F401
+    Author2PapersCache,
+)
+from .impl_p2a import (  # noqa: F401
+    Paper2AuthorsCache,
+)
+from .impl_p2r import (  # noqa: F401
+    Paper2ReferencesCache,
+)
+from .impl_p2c import (  # noqa: F401
+    Paper2CitationsCache,
 )
 
 # Factory functions

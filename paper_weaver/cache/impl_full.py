@@ -19,7 +19,6 @@ from .link_storage import CommittedLinkStorageIface
 from .pending_storage import PendingListStorageIface, PendingListManager
 
 from .impl import ComposableCacheBase
-from .impl_link import AuthorLinkCache, PaperLinkCache
 from .impl_a2p import Author2PapersCache
 from .impl_p2a import Paper2AuthorsCache
 from .impl_p2c import Paper2CitationsCache
