@@ -221,7 +221,7 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
             paper.identifiers = all_identifiers
             paper_id_sets.append(all_identifiers)
 
-        await self._author_papers_list.set_list(author_cid, paper_id_sets)
+        await self._author_papers_list.add_list(author_cid, paper_id_sets)
 
 
 class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
@@ -271,7 +271,7 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
             author.identifiers = all_identifiers
             author_id_sets.append(all_identifiers)
 
-        await self._paper_authors_list.set_list(paper_cid, author_id_sets)
+        await self._paper_authors_list.add_list(paper_cid, author_id_sets)
 
 
 class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
@@ -321,7 +321,7 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
             ref.identifiers = all_identifiers
             ref_id_sets.append(all_identifiers)
 
-        await self._paper_references_list.set_list(paper_cid, ref_id_sets)
+        await self._paper_references_list.add_list(paper_cid, ref_id_sets)
 
 
 class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
@@ -371,7 +371,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             cit.identifiers = all_identifiers
             cit_id_sets.append(all_identifiers)
 
-        await self._paper_citations_list.set_list(paper_cid, cit_id_sets)
+        await self._paper_citations_list.add_list(paper_cid, cit_id_sets)
 
 
 class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):

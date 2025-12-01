@@ -46,7 +46,7 @@ class RedisEntityListStorage(EntityListStorageIface):
         items = json.loads(data)
         return [set(item) for item in items]
 
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def add_list(self, from_id: str, items: List[Set[str]]) -> None:
         import json
         # Convert sets to lists for JSON serialization
         data = [list(s) for s in items]

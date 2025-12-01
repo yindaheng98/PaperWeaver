@@ -42,6 +42,6 @@ class MemoryEntityListStorage(EntityListStorageIface):
                 return None
             return [set(s) for s in self._data[from_id]]
 
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def add_list(self, from_id: str, items: List[Set[str]]) -> None:
         async with self._lock:
             self._data[from_id] = [set(s) for s in items]

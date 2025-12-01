@@ -46,6 +46,6 @@ class EntityListStorageIface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def set_list(self, from_id: str, items: List[Set[str]]) -> None:
+    async def add_list(self, from_id: str, items: List[Set[str]]) -> None:
         """Set the list of identifier sets."""
         raise NotImplementedError
