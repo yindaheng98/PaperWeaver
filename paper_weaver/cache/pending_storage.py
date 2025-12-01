@@ -110,29 +110,28 @@ class PendingListManager:
         """
         Add pending entities to the list, registering each entity and merging with existing entries.
 
-        Each entity's identifiers are registered, making them discoverable
-        via the registry's iteration. If there are existing pending entries,
-        new entries are merged by canonical ID (deduplicated).
-
-        Note: Order is preserved for existing entries. New entries that share a
-        canonical ID with existing ones will merge their identifiers but keep
-        the original position. Completely new entries are appended at the end.
+        Each entity's identifiers are registered so subsequent lookups see the
+        merged result. The stored pending list keeps its existing order, and any
+        new canonical IDs are appended. The returned list mirrors the input order,
+        but each identifier set is expanded with every known identifier.
 
         Args:
             from_canonical_id: The canonical ID of the source entity
             identifiers_list: List of identifier sets for each pending entity
 
         Returns:
-            List of merged identifier sets (may include previously pending entities)
+            Updated identifier sets corresponding to identifiers_list (after merging)
         """
         result = await self.get_pending_canonical_id_identifier_set_dict(from_canonical_id)
         if result is None:
             result = {}
+        updated_identifiers_list = []
         for id_set in identifiers_list:
             canonical_id = await self._registry.register(id_set)
             all_identifiers = await self._registry.get_all_identifiers(canonical_id)
             result[canonical_id] = all_identifiers
+            updated_identifiers_list.append(all_identifiers)
 
         registered_sets = list(result.values())
         await self._storage.set_pending_identifier_sets(from_canonical_id, registered_sets)
-        return registered_sets
+        return updated_identifiers_list
