@@ -5,13 +5,12 @@ Two objects with any common identifier are considered the same object.
 When objects are merged, their identifier sets are combined.
 """
 
-from typing import Set, Optional
 import asyncio
 
-from ..identifier import IdentifierRegistryIface, T
+from ..identifier import IdentifierRegistryIface
 
 
-class RedisIdentifierRegistry(IdentifierRegistryIface[T]):
+class RedisIdentifierRegistry(IdentifierRegistryIface):
     """Redis implementation of identifier registry."""
 
     def __init__(self, redis_client, prefix: str = "idreg"):
@@ -31,14 +30,14 @@ class RedisIdentifierRegistry(IdentifierRegistryIface[T]):
     def _all_canonicals_key(self) -> str:
         return f"{self._prefix}:all_canonicals"
 
-    async def get_canonical_id(self, identifiers: Set[str]) -> Optional[str]:
+    async def get_canonical_id(self, identifiers: set[str]) -> str | None:
         for ident in identifiers:
             result = await self._redis.get(self._ident_key(ident))
             if result:
                 return result.decode() if isinstance(result, bytes) else result
         return None
 
-    async def register(self, identifiers: Set[str]) -> str:
+    async def register(self, identifiers: set[str]) -> str:
         async with self._lock:
             # Find all existing canonical IDs
             existing_canonical_ids = set()
@@ -88,7 +87,7 @@ class RedisIdentifierRegistry(IdentifierRegistryIface[T]):
             await pipe.execute()
             return primary_canonical
 
-    async def get_all_identifiers(self, canonical_id: str) -> Set[str]:
+    async def get_all_identifiers(self, canonical_id: str) -> set[str]:
         members = await self._redis.smembers(self._canonical_key(canonical_id))
         return {m.decode() if isinstance(m, bytes) else m for m in members}
 

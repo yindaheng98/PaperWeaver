@@ -6,7 +6,7 @@ When objects are merged, their identifier sets are combined.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Set, Optional
+from typing import AsyncIterator
 
 
 class IdentifierRegistryIface(metaclass=ABCMeta):
@@ -20,7 +20,7 @@ class IdentifierRegistryIface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def get_canonical_id(self, identifiers: Set[str]) -> Optional[str]:
+    async def get_canonical_id(self, identifiers: set[str]) -> str | None:
         """
         Get the canonical ID for a set of identifiers.
         Returns None if no identifier is registered.
@@ -28,7 +28,7 @@ class IdentifierRegistryIface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def register(self, identifiers: Set[str]) -> str:
+    async def register(self, identifiers: set[str]) -> str:
         """
         Register identifiers and return the canonical ID.
         If any identifier is already registered, merge all and return existing canonical ID.
@@ -37,11 +37,11 @@ class IdentifierRegistryIface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_all_identifiers(self, canonical_id: str) -> Set[str]:
+    async def get_all_identifiers(self, canonical_id: str) -> set[str]:
         """Get all identifiers associated with a canonical ID."""
         raise NotImplementedError
 
     @abstractmethod
-    async def iterate_canonical_ids(self):
+    def iterate_canonical_ids(self) -> AsyncIterator[str]:
         """Async iterator over all canonical IDs."""
         raise NotImplementedError

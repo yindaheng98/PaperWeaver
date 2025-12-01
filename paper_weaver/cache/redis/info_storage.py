@@ -4,7 +4,6 @@ Info Storage - Stores entity information (dict data).
 Separated from relationship storage for flexible composition.
 """
 
-from typing import Optional
 import json
 
 from ..info_storage import InfoStorageIface
@@ -20,7 +19,7 @@ class RedisInfoStorage(InfoStorageIface):
     def _key(self, canonical_id: str) -> str:
         return f"{self._prefix}:{canonical_id}"
 
-    async def get_info(self, canonical_id: str) -> Optional[dict]:
+    async def get_info(self, canonical_id: str) -> dict | None:
         result = await self._redis.get(self._key(canonical_id))
         if result is None:
             return None

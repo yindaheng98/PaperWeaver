@@ -8,7 +8,6 @@ Manager classes:
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Set, Optional, List
 
 from .identifier import IdentifierRegistryIface
 
@@ -26,7 +25,7 @@ class PendingListStorageIface(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def get_pending_identifier_sets(self, from_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_id: str) -> list[set[str]] | None:
         """
         Get list of pending entity identifier sets.
         Returns None if not set (vs empty list if explicitly set empty).
@@ -34,7 +33,7 @@ class PendingListStorageIface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def set_pending_identifier_sets(self, from_id: str, items: List[Set[str]]) -> None:
+    async def set_pending_identifier_sets(self, from_id: str, items: list[set[str]]) -> None:
         """Set the list of pending entity identifier sets."""
         raise NotImplementedError
 
@@ -66,7 +65,7 @@ class PendingListManager:
         self._registry = entity_registry
         self._storage = pending_storage
 
-    async def get_pending_canonical_id_identifier_set_dict(self, from_canonical_id: str) -> Optional[Dict[str, Set[str]]]:
+    async def get_pending_canonical_id_identifier_set_dict(self, from_canonical_id: str) -> dict[str, set[str]] | None:
         """
         Get pending entity list in the form of a dictionary (canonical_id -> identifiers), merging identifiers for each entity.
 
@@ -90,7 +89,7 @@ class PendingListManager:
             result[canonical_id] = all_identifiers
         return result
 
-    async def get_pending_identifier_sets(self, from_canonical_id: str) -> Optional[List[Set[str]]]:
+    async def get_pending_identifier_sets(self, from_canonical_id: str) -> list[set[str]] | None:
         """
         Get pending entity list, merging identifiers for each entity.
 
@@ -108,7 +107,7 @@ class PendingListManager:
             return None
         return list(result.values())
 
-    async def set_pending_identifier_sets(self, from_canonical_id: str, identifiers_list: List[Set[str]]) -> List[Set[str]]:
+    async def add_pending_identifier_sets(self, from_canonical_id: str, identifiers_list: list[set[str]]) -> list[set[str]]:
         """
         Set pending entity list, registering each entity and merging with existing entries.
 

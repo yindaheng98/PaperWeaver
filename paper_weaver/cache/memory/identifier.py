@@ -5,32 +5,31 @@ Two objects with any common identifier are considered the same object.
 When objects are merged, their identifier sets are combined.
 """
 
-from typing import Set, Dict, Optional
 import asyncio
 
-from ..identifier import IdentifierRegistryIface, T
+from ..identifier import IdentifierRegistryIface
 
 
-class MemoryIdentifierRegistry(IdentifierRegistryIface[T]):
+class MemoryIdentifierRegistry(IdentifierRegistryIface):
     """In-memory implementation of identifier registry using Union-Find."""
 
     def __init__(self):
         self._lock = asyncio.Lock()
         # Maps identifier -> canonical_id
-        self._identifier_to_canonical: Dict[str, str] = {}
+        self._identifier_to_canonical: dict[str, str] = {}
         # Maps canonical_id -> set of all identifiers
-        self._canonical_to_identifiers: Dict[str, Set[str]] = {}
+        self._canonical_to_identifiers: dict[str, set[str]] = {}
         # Counter for generating new canonical IDs
         self._counter = 0
 
-    async def get_canonical_id(self, identifiers: Set[str]) -> Optional[str]:
+    async def get_canonical_id(self, identifiers: set[str]) -> str | None:
         async with self._lock:
             for ident in identifiers:
                 if ident in self._identifier_to_canonical:
                     return self._identifier_to_canonical[ident]
             return None
 
-    async def register(self, identifiers: Set[str]) -> str:
+    async def register(self, identifiers: set[str]) -> str:
         async with self._lock:
             # Find all existing canonical IDs that match any identifier
             existing_canonical_ids = set()
@@ -67,7 +66,7 @@ class MemoryIdentifierRegistry(IdentifierRegistryIface[T]):
 
             return primary_canonical
 
-    async def get_all_identifiers(self, canonical_id: str) -> Set[str]:
+    async def get_all_identifiers(self, canonical_id: str) -> set[str]:
         async with self._lock:
             return set(self._canonical_to_identifiers.get(canonical_id, set()))
 

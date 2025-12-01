@@ -5,7 +5,6 @@ Separated from relationship storage for flexible composition.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Optional, Set
 
 from .identifier import IdentifierRegistryIface
 
@@ -14,7 +13,7 @@ class InfoStorageIface(metaclass=ABCMeta):
     """Interface for storing entity info by canonical ID."""
 
     @abstractmethod
-    async def get_info(self, canonical_id: str) -> Optional[dict]:
+    async def get_info(self, canonical_id: str) -> dict | None:
         """Get info for a canonical ID. Returns None if not found."""
         raise NotImplementedError
 
@@ -42,7 +41,7 @@ class EntityInfoManager:
         self._registry = identifier_registry
         self._storage = info_storage
 
-    async def get_info(self, identifiers: Set[str], merge_identifiers: bool = True) -> tuple[str | None, Set[str], dict | None]:
+    async def get_info(self, identifiers: set[str], merge_identifiers: bool = True) -> tuple[str | None, set[str], dict | None]:
         """
         Get info for an entity by its identifiers.
 
@@ -67,7 +66,7 @@ class EntityInfoManager:
         info = await self._storage.get_info(canonical_id)
         return canonical_id, all_identifiers, info
 
-    async def set_info(self, identifiers: Set[str], info: dict) -> tuple[str, Set[str]]:
+    async def set_info(self, identifiers: set[str], info: dict) -> tuple[str, set[str]]:
         """
         Set info for an entity.
 
@@ -78,7 +77,7 @@ class EntityInfoManager:
         all_identifiers = await self._registry.get_all_identifiers(canonical_id)
         return canonical_id, all_identifiers
 
-    async def register_identifiers(self, identifiers: Set[str]) -> tuple[str, Set[str]]:
+    async def register_identifiers(self, identifiers: set[str]) -> tuple[str, set[str]]:
         """
         Register identifiers without setting info.
 

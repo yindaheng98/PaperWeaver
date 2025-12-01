@@ -1,8 +1,8 @@
 """
-Redis implementations for link tracking and pending entity lists.
+Redis implementations for pending entity lists.
 """
 
-from typing import Set, Optional, List
+import json
 
 from ..pending_storage import PendingListStorageIface
 
@@ -17,8 +17,7 @@ class RedisPendingListStorage(PendingListStorageIface):
     def _key(self, from_id: str) -> str:
         return f"{self._prefix}:{from_id}"
 
-    async def get_pending_identifier_sets(self, from_id: str) -> Optional[List[Set[str]]]:
-        import json
+    async def get_pending_identifier_sets(self, from_id: str) -> list[set[str]] | None:
         result = await self._redis.get(self._key(from_id))
         if result is None:
             return None
@@ -26,8 +25,7 @@ class RedisPendingListStorage(PendingListStorageIface):
         items = json.loads(data)
         return [set(item) for item in items]
 
-    async def set_pending_identifier_sets(self, from_id: str, items: List[Set[str]]) -> None:
-        import json
+    async def set_pending_identifier_sets(self, from_id: str, items: list[set[str]]) -> None:
         # Convert sets to lists for JSON serialization
         data = [list(s) for s in items]
         await self._redis.set(self._key(from_id), json.dumps(data))

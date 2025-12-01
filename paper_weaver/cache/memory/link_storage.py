@@ -2,7 +2,6 @@
 Memory implementations for link tracking and pending entity lists.
 """
 
-from typing import Set
 import asyncio
 
 from ..link_storage import CommittedLinkStorageIface
@@ -12,7 +11,7 @@ class MemoryCommittedLinkStorage(CommittedLinkStorageIface):
     """In-memory storage for committed links."""
 
     def __init__(self):
-        self._links: dict[str, Set[str]] = {}
+        self._links: dict[str, set[str]] = {}
         self._lock = asyncio.Lock()
 
     async def commit_link(self, from_id: str, to_id: str) -> None:
