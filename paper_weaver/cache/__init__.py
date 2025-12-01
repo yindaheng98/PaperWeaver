@@ -38,15 +38,11 @@ Usage:
 # Identifier Registry
 from .identifier import (
     IdentifierRegistryIface,
-    MemoryIdentifierRegistry,
-    RedisIdentifierRegistry,
 )
 
 # Info Storage
 from .info_storage import (
     InfoStorageIface,
-    MemoryInfoStorage,
-    RedisInfoStorage,
     EntityInfoManager,
 )
 
@@ -58,6 +54,16 @@ from .link_storage import (
     EntityListStorageIface,
     MemoryEntityListStorage,
     RedisEntityListStorage,
+)
+
+from .memory import (  # noqa: F401
+    MemoryIdentifierRegistry,
+    MemoryInfoStorage,
+)
+
+from .redis import (  # noqa: F401
+    RedisIdentifierRegistry,
+    RedisInfoStorage,
 )
 
 # Composite Cache

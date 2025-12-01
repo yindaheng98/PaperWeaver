@@ -5,9 +5,7 @@ Separated from relationship storage for flexible composition.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Optional, Set
-import json
-import asyncio
+from typing import Optional, Set
 
 from .identifier import IdentifierRegistryIface
 
@@ -29,50 +27,6 @@ class InfoStorageIface(metaclass=ABCMeta):
     async def has_info(self, canonical_id: str) -> bool:
         """Check if info exists for a canonical ID."""
         raise NotImplementedError
-
-
-class MemoryInfoStorage(InfoStorageIface):
-    """In-memory info storage using dict."""
-
-    def __init__(self):
-        self._data: Dict[str, dict] = {}
-        self._lock = asyncio.Lock()
-
-    async def get_info(self, canonical_id: str) -> Optional[dict]:
-        async with self._lock:
-            return self._data.get(canonical_id)
-
-    async def set_info(self, canonical_id: str, info: dict) -> None:
-        async with self._lock:
-            self._data[canonical_id] = info
-
-    async def has_info(self, canonical_id: str) -> bool:
-        async with self._lock:
-            return canonical_id in self._data
-
-
-class RedisInfoStorage(InfoStorageIface):
-    """Redis info storage."""
-
-    def __init__(self, redis_client, prefix: str = "info"):
-        self._redis = redis_client
-        self._prefix = prefix
-
-    def _key(self, canonical_id: str) -> str:
-        return f"{self._prefix}:{canonical_id}"
-
-    async def get_info(self, canonical_id: str) -> Optional[dict]:
-        result = await self._redis.get(self._key(canonical_id))
-        if result is None:
-            return None
-        data = result.decode() if isinstance(result, bytes) else result
-        return json.loads(data)
-
-    async def set_info(self, canonical_id: str, info: dict) -> None:
-        await self._redis.set(self._key(canonical_id), json.dumps(info))
-
-    async def has_info(self, canonical_id: str) -> bool:
-        return await self._redis.exists(self._key(canonical_id)) > 0
 
 
 class EntityInfoManager:
