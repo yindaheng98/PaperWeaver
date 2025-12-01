@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
+from typing import Tuple, AsyncIterator
 from .dataclass import Paper, Author, DataSrc, DataDst
 
 
@@ -21,6 +21,14 @@ class WeaverCacheIface(metaclass=ABCMeta):
 
     @abstractmethod
     async def set_paper_info(self, paper: Paper, info: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def iterate_authors(self) -> AsyncIterator[Author]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def iterate_papers(self) -> AsyncIterator[Paper]:
         raise NotImplementedError
 
 

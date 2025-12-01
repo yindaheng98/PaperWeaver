@@ -1,21 +1,13 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 import asyncio
 import logging
-from typing import AsyncIterator
-from .dataclass import Paper, Author, DataSrc, DataDst
+from .dataclass import DataSrc, DataDst
 from .iface_a2p import Author2PapersWeaverIface, Author2PapersWeaverCacheIface
 from .iface_p2a import Paper2AuthorsWeaverIface, Paper2AuthorsWeaverCacheIface
 
 
 class AuthorWeaverCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface, metaclass=ABCMeta):
-
-    @abstractmethod
-    def iterate_authors(self) -> AsyncIterator[Author, None]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def iterate_papers(self) -> AsyncIterator[Paper, None]:
-        raise NotImplementedError
+    pass
 
 
 class AuthorWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface):
