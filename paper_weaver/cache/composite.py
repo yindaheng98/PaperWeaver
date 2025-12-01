@@ -13,10 +13,6 @@ Key concepts:
 """
 
 
-from ..dataclass import Paper
-from ..iface_p2c import Paper2CitationsWeaverCacheIface
-from ..iface_p2r import Paper2ReferencesWeaverCacheIface
-
 from .identifier import IdentifierRegistryIface
 from .info_storage import InfoStorageIface
 from .link_storage import CommittedLinkStorageIface
@@ -26,96 +22,8 @@ from .impl import ComposableCacheBase
 from .impl_link import AuthorLinkCache, PaperLinkCache
 from .impl_a2p import Author2PapersCache
 from .impl_p2a import Paper2AuthorsCache
-
-
-class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
-    """
-    Cache for paper -> references relationships.
-
-    Additional components:
-    - pending_references: PendingListManager for paper's pending references
-    """
-
-    def __init__(
-        self,
-        paper_registry: IdentifierRegistryIface,
-        paper_info_storage: InfoStorageIface,
-        author_registry: IdentifierRegistryIface,
-        author_info_storage: InfoStorageIface,
-        committed_reference_links: CommittedLinkStorageIface,
-        pending_references: PendingListStorageIface,
-    ):
-        super().__init__(
-            paper_registry, paper_info_storage,
-            author_registry, author_info_storage,
-            committed_reference_links
-        )
-        self._pending_references_manager = PendingListManager(
-            self._paper_manager._registry, pending_references
-        )
-
-    async def get_pending_references_for_paper(self, paper: Paper) -> list[Paper] | None:
-        """Get pending references for paper."""
-        paper_cid = await self._get_paper_canonical_id(paper)
-        id_sets = await self._pending_references_manager.get_pending_identifier_sets(paper_cid)
-        if id_sets is None:
-            return None
-        return [Paper(identifiers=ids) for ids in id_sets]
-
-    async def add_pending_references_for_paper(self, paper: Paper, references: list[Paper]) -> None:
-        """Add pending references for paper (registers them, merges with existing)."""
-        paper_cid = await self._get_paper_canonical_id(paper)
-        registered_sets = await self._pending_references_manager.add_pending_identifier_sets(
-            paper_cid, [r.identifiers for r in references]
-        )
-        # Update reference identifiers with merged sets
-        for ref, ids in zip(references, registered_sets):
-            ref.identifiers = ids
-
-
-class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
-    """
-    Cache for paper -> citations relationships.
-
-    Additional components:
-    - pending_citations: PendingListManager for paper's pending citations
-    """
-
-    def __init__(
-        self,
-        paper_registry: IdentifierRegistryIface,
-        paper_info_storage: InfoStorageIface,
-        author_registry: IdentifierRegistryIface,
-        author_info_storage: InfoStorageIface,
-        committed_reference_links: CommittedLinkStorageIface,
-        pending_citations: PendingListStorageIface,
-    ):
-        super().__init__(
-            paper_registry, paper_info_storage,
-            author_registry, author_info_storage,
-            committed_reference_links
-        )
-        self._pending_citations_manager = PendingListManager(
-            self._paper_manager._registry, pending_citations
-        )
-
-    async def get_pending_citations_for_paper(self, paper: Paper) -> list[Paper] | None:
-        """Get pending citations for paper."""
-        paper_cid = await self._get_paper_canonical_id(paper)
-        id_sets = await self._pending_citations_manager.get_pending_identifier_sets(paper_cid)
-        if id_sets is None:
-            return None
-        return [Paper(identifiers=ids) for ids in id_sets]
-
-    async def add_pending_citations_for_paper(self, paper: Paper, citations: list[Paper]) -> None:
-        """Add pending citations for paper (registers them, merges with existing)."""
-        paper_cid = await self._get_paper_canonical_id(paper)
-        registered_sets = await self._pending_citations_manager.add_pending_identifier_sets(
-            paper_cid, [c.identifiers for c in citations]
-        )
-        # Update citation identifiers with merged sets
-        for cit, ids in zip(citations, registered_sets):
-            cit.identifiers = ids
+from .impl_p2c import Paper2CitationsCache
+from .impl_p2r import Paper2ReferencesCache
 
 
 class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):
