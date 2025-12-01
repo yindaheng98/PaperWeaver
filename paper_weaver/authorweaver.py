@@ -57,15 +57,27 @@ class AuthorWeaverCache(metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class AuthorWeaver:
-    logger = logging.getLogger("AuthorWeaver")
+class WeaverIface(metaclass=ABCMeta):
 
-    def __init__(self, src: DataSrc, dst: DataDst, cache: AuthorWeaverCache):
-        self.src = src
-        self.dst = dst
-        self.cache = cache
+    @property
+    @abstractmethod
+    def src(self) -> DataSrc:
+        raise ValueError("Model is not set")
 
-    async def _process_author_with_papers(self, author: Author) -> Tuple[int, int] | None:
+    @property
+    @abstractmethod
+    def dst(self) -> DataDst:
+        raise ValueError("Model is not set")
+
+
+class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
+
+    @property
+    @abstractmethod
+    def cache(self) -> AuthorWeaverCache:
+        raise ValueError("Model is not set")
+
+    async def author_to_papers(self, author: Author) -> Tuple[int, int] | None:
         """Process one author: fetch info and papers, write to cache and dst. Return number of new papers fetched and number of failed papers, or None if failed."""
         # Step 1: Fetch and save author info
         author, author_info = await self.cache.get_author_info(author)  # fetch from cache
@@ -112,7 +124,15 @@ class AuthorWeaver:
 
         return n_new_papers, n_failed
 
-    async def _process_paper_with_authors(self, paper: Paper) -> Tuple[int, int] | None:
+
+class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
+
+    @property
+    @abstractmethod
+    def cache(self) -> AuthorWeaverCache:
+        raise ValueError("Model is not set")
+
+    async def paper_to_authors(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and authors, write to cache and dst. Return number of new authors fetched and number of failed authors, or None if failed."""
         # Step 1: Fetch and save paper info
         paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
@@ -159,10 +179,31 @@ class AuthorWeaver:
 
         return n_new_authors, n_failed
 
+
+class AuthorWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface):
+    logger = logging.getLogger("AuthorWeaver")
+
+    def __init__(self, src: DataSrc, dst: DataDst, cache: AuthorWeaverCache):
+        self._src = src
+        self._dst = dst
+        self._cache = cache
+
+    @property
+    def src(self) -> DataSrc:
+        return self._src
+
+    @property
+    def dst(self) -> DataDst:
+        return self._dst
+
+    @property
+    def cache(self) -> AuthorWeaverCache:
+        return self._cache
+
     async def bfs_once(self):
         tasks = []
         async for author in self.cache.iterate_authors():
-            tasks.append(self._process_author_with_papers(author))
+            tasks.append(self.author_to_papers(author))
         self.logger.info(f"Fetching papers from {len(tasks)} new authors")
         state = await asyncio.gather(*tasks)
         author_succ_count, author_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
@@ -171,7 +212,7 @@ class AuthorWeaver:
 
         tasks = []
         async for paper in self.cache.iterate_papers():
-            tasks.append(self._process_paper_with_authors(paper))
+            tasks.append(self.paper_to_authors(paper))
         self.logger.info(f"Fetching authors from {len(tasks)} new papers")
         state = await asyncio.gather(*tasks)
         paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
