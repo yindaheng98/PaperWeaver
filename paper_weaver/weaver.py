@@ -65,15 +65,14 @@ class AuthorWeaver:
         self.dst = dst
         self.cache = cache
 
-    async def _process_author_with_papers(self, author: Author) -> int:
-        """Process one author: fetch info and papers, write to cache and dst"""
-        n_new_papers = 0
+    async def _process_author_with_papers(self, author: Author) -> Tuple[int, int] | None:
+        """Process one author: fetch info and papers, write to cache and dst. Return number of new papers fetched and number of failed papers, or None if failed."""
         # Step 1: Fetch and save author info
         author, author_info = await self.cache.get_author_info(author)  # fetch from cache
         if author_info is None:  # not in cache
             author, author_info = await author.get_info(self.src)  # fetch from source
             if author_info is None:  # failed to fetch
-                return n_new_papers  # no new author, no new papers
+                return None  # no new author, no new papers
             # Write author info if fetched
             await self.dst.save_author_info(author, author_info)
             await self.cache.set_author_info(author, author_info)
@@ -83,28 +82,35 @@ class AuthorWeaver:
         if papers is None:  # not in cache
             papers = await author.get_papers(self.src)  # fetch from source
             if papers is None:  # failed to fetch
-                return n_new_papers  # no new papers
+                return None  # no new papers
             # Write papers if fetched
             await self.cache.set_papers_of_author(author, papers)
 
         # Step 3: Fetch and save info for all papers of this author
-        for paper in papers:
+        async def process_paper(paper):
+            n_new = 0
             paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
             if paper_info is None:  # not in cache
                 paper, paper_info = await paper.get_info(self.src)  # fetch from source
                 if paper_info is None:  # failed to fetch
-                    continue  # no new paper
+                    return None  # no new paper
                 # Write paper info if fetched
                 await self.dst.save_paper_info(paper, paper_info)
                 await self.cache.set_paper_info(paper, paper_info)
-                n_new_papers += 1
+                n_new = 1
 
             # Step 4: Link authors to paper if not already linked
             if not await self.cache.is_link_author(paper, author):  # check link in cache
                 await self.dst.link_author(paper, author)  # link in dst
                 await self.cache.link_author(paper, author)  # link in cache
 
-        return n_new_papers
+            return n_new
+
+        results = await asyncio.gather(*[process_paper(paper) for paper in papers])
+        n_new_papers = sum([r for r in results if r is not None])
+        n_failed = sum([1 for r in results if r is None])
+
+        return n_new_papers, n_failed
 
     async def _process_paper_with_authors(self, paper: Paper) -> int:
         """Process one paper: fetch info and authors, write to cache and dst"""
