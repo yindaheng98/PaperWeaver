@@ -10,7 +10,7 @@ Manager classes:
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Set, Optional, List
+from typing import Dict, Set, Optional, List
 
 from .identifier import IdentifierRegistryIface
 
@@ -71,10 +71,10 @@ class PendingListManager:
 
     Usage:
         manager = PendingListManager(paper_registry, pending_storage)
-        
+
         # Set pending papers for an author
         registered_sets = await manager.set_list(author_cid, [p.identifiers for p in papers])
-        
+
         # Get pending papers for an author
         id_sets = await manager.get_list(author_cid)
     """
@@ -86,6 +86,30 @@ class PendingListManager:
     ):
         self._registry = entity_registry
         self._storage = pending_storage
+
+    async def _get_dict(self, from_canonical_id: str) -> Optional[Dict[str, Set[str]]]:
+        """
+        Get pending entity list in the form of a dictionary (canonical_id -> identifiers), merging identifiers for each entity.
+
+        Each entity's identifiers are registered and merged with any existing
+        identifiers for that entity.
+
+        Args:
+            from_canonical_id: The canonical ID of the source entity
+
+        Returns:
+            List of identifier sets (one per entity), or None if not set
+        """
+        identifiers_list = await self._storage.get_list(from_canonical_id)
+        if identifiers_list is None:
+            return None
+
+        result = {}
+        for id_set in identifiers_list:
+            canonical_id = await self._registry.register(id_set)
+            all_identifiers = await self._registry.get_all_identifiers(canonical_id)
+            result[canonical_id] = all_identifiers
+        return result
 
     async def get_list(self, from_canonical_id: str) -> Optional[List[Set[str]]]:
         """
@@ -100,18 +124,12 @@ class PendingListManager:
         Returns:
             List of identifier sets (one per entity), or None if not set
         """
-        id_sets = await self._storage.get_list(from_canonical_id)
-        if id_sets is None:
+        result = await self._get_dict(from_canonical_id)
+        if result is None:
             return None
+        return list(result.values())
 
-        result = []
-        for id_set in id_sets:
-            canonical_id = await self._registry.register(id_set)
-            all_identifiers = await self._registry.get_all_identifiers(canonical_id)
-            result.append(all_identifiers)
-        return result
-
-    async def set_list(self, from_canonical_id: str, id_sets: List[Set[str]]) -> List[Set[str]]:
+    async def set_list(self, from_canonical_id: str, identifiers_list: List[Set[str]]) -> List[Set[str]]:
         """
         Set pending entity list, registering each entity.
 
@@ -120,16 +138,20 @@ class PendingListManager:
 
         Args:
             from_canonical_id: The canonical ID of the source entity
-            id_sets: List of identifier sets for each pending entity
+            identifiers_list: List of identifier sets for each pending entity
 
         Returns:
             List of merged identifier sets (with any existing identifiers)
         """
+        result = await self._get_dict(from_canonical_id)
+        if result is None:
+            result = {}
         registered_sets = []
-        for id_set in id_sets:
+        for id_set in identifiers_list:
             canonical_id = await self._registry.register(id_set)
             all_identifiers = await self._registry.get_all_identifiers(canonical_id)
-            registered_sets.append(all_identifiers)
+            result[canonical_id] = all_identifiers
 
+        registered_sets = list(result.values())
         await self._storage.set_list(from_canonical_id, registered_sets)
         return registered_sets
