@@ -5,7 +5,8 @@ Provides convenient functions to create fully configured cache instances
 using either memory or Redis backends.
 """
 
-from .identifier import MemoryIdentifierRegistry, RedisIdentifierRegistry
+from .memory import MemoryIdentifierRegistry
+from .redis import RedisIdentifierRegistry
 from .info_storage import MemoryInfoStorage, RedisInfoStorage
 from .link_storage import (
     MemoryLinkStorage, RedisLinkStorage,
