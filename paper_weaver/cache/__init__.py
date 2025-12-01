@@ -50,6 +50,7 @@ from .info_storage import (
 from .link_storage import (
     CommittedLinkStorageIface,
     PendingListStorageIface,
+    PendingListManager,
 )
 
 from .memory import (  # noqa: F401
@@ -104,6 +105,7 @@ __all__ = [
     "RedisCommittedLinkStorage",
     # Pending List Storage
     "PendingListStorageIface",
+    "PendingListManager",
     "MemoryPendingListStorage",
     "RedisPendingListStorage",
     # Composite Cache
