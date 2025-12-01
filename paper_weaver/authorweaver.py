@@ -1,10 +1,10 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import logging
-from typing import AsyncIterator, Tuple
+from typing import AsyncIterator
 from .dataclass import Paper, Author, DataSrc, DataDst
-from .iface import Author2PapersWeaverIface, Paper2AuthorsWeaverIface
-from .iface import Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface
+from .iface_a2p import Author2PapersWeaverIface, Author2PapersWeaverCacheIface
+from .iface_p2a import Paper2AuthorsWeaverIface, Paper2AuthorsWeaverCacheIface
 
 
 class AuthorWeaverCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface, metaclass=ABCMeta):

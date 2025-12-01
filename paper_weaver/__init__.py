@@ -1,4 +1,5 @@
 from .dataclass import Paper, Author, Venue, DataSrc, DataDst
-from .iface import WeaverIface, Author2PapersWeaverIface, Paper2AuthorsWeaverIface
-from .iface import Author2PapersWeaverCacheIface, Paper2AuthorsWeaverCacheIface
+from .iface import WeaverIface, WeaverCacheIface
+from .iface_a2p import Author2PapersWeaverIface, Author2PapersWeaverCacheIface
+from .iface_p2a import Paper2AuthorsWeaverIface, Paper2AuthorsWeaverCacheIface
 from .authorweaver import AuthorWeaver, AuthorWeaverCache

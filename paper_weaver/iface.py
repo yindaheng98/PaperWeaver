@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-import asyncio
 from typing import Tuple
 from .dataclass import Paper, Author, DataSrc, DataDst
 
