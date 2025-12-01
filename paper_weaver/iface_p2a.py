@@ -24,12 +24,12 @@ class Paper2AuthorsWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMet
     """
 
     @abstractmethod
-    async def get_pending_authors(self, paper: Paper) -> list[Author] | None:
+    async def get_pending_authors_for_paper(self, paper: Paper) -> list[Author] | None:
         """Get pending authors for paper. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_pending_authors(self, paper: Paper, authors: list[Author]) -> None:
+    async def add_pending_authors_for_paper(self, paper: Paper, authors: list[Author]) -> None:
         """Add pending authors for paper (registers them, merges with existing)."""
         raise NotImplementedError
 
@@ -54,13 +54,13 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.cache.set_paper_info(paper, paper_info)
 
         # Step 2: Get or fetch pending authors (not yet written to DataDst)
-        authors = await self.cache.get_pending_authors(paper)  # fetch from cache
+        authors = await self.cache.get_pending_authors_for_paper(paper)  # fetch from cache
         if authors is None:  # not in cache
             authors = await paper.get_authors(self.src)  # fetch from source
             if authors is None:  # failed to fetch
                 return None  # no new authors
             # Cache pending authors (registers them, discoverable via iterate_authors)
-            await self.cache.add_pending_authors(paper, authors)
+            await self.cache.add_pending_authors_for_paper(paper, authors)
 
         # Step 3: Process each author - fetch info and commit link
         async def process_author(author):

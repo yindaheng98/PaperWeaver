@@ -24,12 +24,12 @@ class Paper2CitationsWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMe
     """
 
     @abstractmethod
-    async def get_pending_citations(self, paper: Paper) -> list[Paper] | None:
+    async def get_pending_citations_for_paper(self, paper: Paper) -> list[Paper] | None:
         """Get pending citations for paper. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
+    async def add_pending_citations_for_paper(self, paper: Paper, citations: list[Paper]) -> None:
         """Add pending citations for paper (registers them, merges with existing)."""
         raise NotImplementedError
 
@@ -54,13 +54,13 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.cache.set_paper_info(paper, paper_info)
 
         # Step 2: Get or fetch pending citations (not yet written to DataDst)
-        citations = await self.cache.get_pending_citations(paper)  # fetch from cache
+        citations = await self.cache.get_pending_citations_for_paper(paper)  # fetch from cache
         if citations is None:  # not in cache
             citations = await paper.get_citations(self.src)  # fetch from source
             if citations is None:  # failed to fetch
                 return None  # no new citations
             # Cache pending citations (registers them, discoverable via iterate_papers)
-            await self.cache.add_pending_citations(paper, citations)
+            await self.cache.add_pending_citations_for_paper(paper, citations)
 
         # Step 3: Process each citation - fetch info and commit link
         async def process_citation(citation):

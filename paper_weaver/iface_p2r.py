@@ -24,12 +24,12 @@ class Paper2ReferencesWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCM
     """
 
     @abstractmethod
-    async def get_pending_references(self, paper: Paper) -> list[Paper] | None:
+    async def get_pending_references_for_paper(self, paper: Paper) -> list[Paper] | None:
         """Get pending references for paper. Returns None if not yet fetched."""
         raise NotImplementedError
 
     @abstractmethod
-    async def add_pending_references(self, paper: Paper, references: list[Paper]) -> None:
+    async def add_pending_references_for_paper(self, paper: Paper, references: list[Paper]) -> None:
         """Add pending references for paper (registers them, merges with existing)."""
         raise NotImplementedError
 
@@ -54,13 +54,13 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
             await self.cache.set_paper_info(paper, paper_info)
 
         # Step 2: Get or fetch pending references (not yet written to DataDst)
-        references = await self.cache.get_pending_references(paper)  # fetch from cache
+        references = await self.cache.get_pending_references_for_paper(paper)  # fetch from cache
         if references is None:  # not in cache
             references = await paper.get_references(self.src)  # fetch from source
             if references is None:  # failed to fetch
                 return None  # no new references
             # Cache pending references (registers them, discoverable via iterate_papers)
-            await self.cache.add_pending_references(paper, references)
+            await self.cache.add_pending_references_for_paper(paper, references)
 
         # Step 3: Process each reference - fetch info and commit link
         async def process_reference(reference):
