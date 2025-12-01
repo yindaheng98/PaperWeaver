@@ -112,15 +112,14 @@ class AuthorWeaver:
 
         return n_new_papers, n_failed
 
-    async def _process_paper_with_authors(self, paper: Paper) -> int:
-        """Process one paper: fetch info and authors, write to cache and dst"""
-        n_new_authors = 0
+    async def _process_paper_with_authors(self, paper: Paper) -> Tuple[int, int] | None:
+        """Process one paper: fetch info and authors, write to cache and dst. Return number of new authors fetched and number of failed authors, or None if failed."""
         # Step 1: Fetch and save paper info
         paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
         if paper_info is None:  # not in cache
             paper, paper_info = await paper.get_info(self.src)  # fetch from source
             if paper_info is None:  # failed to fetch
-                return n_new_authors  # no new paper, no new authors
+                return None  # no new paper, no new authors
             # Write paper info if fetched
             await self.dst.save_paper_info(paper, paper_info)
             await self.cache.set_paper_info(paper, paper_info)
@@ -130,28 +129,35 @@ class AuthorWeaver:
         if authors is None:  # not in cache
             authors = await paper.get_authors(self.src)  # fetch from source
             if authors is None:  # failed to fetch
-                return n_new_authors  # no new authors
+                return None  # no new authors
             # Write authors if fetched
             await self.cache.set_authors_of_paper(paper, authors)
 
         # Step 3: Fetch and save info for all authors of this paper
-        for author in authors:
+        async def process_author(author):
+            n_new = 0
             author, author_info = await self.cache.get_author_info(author)  # fetch from cache
             if author_info is None:  # not in cache
                 author, author_info = await author.get_info(self.src)  # fetch from source
                 if author_info is None:  # failed to fetch
-                    continue  # no new author
+                    return None  # no new author
                 # Write author info if fetched
                 await self.dst.save_author_info(author, author_info)
                 await self.cache.set_author_info(author, author_info)
-                n_new_authors += 1
+                n_new = 1
 
             # Step 4: Link authors to paper if not already linked
             if not await self.cache.is_link_author(paper, author):  # check link in cache
                 await self.dst.link_author(paper, author)  # link in dst
                 await self.cache.link_author(paper, author)  # link in cache
 
-        return n_new_authors
+            return n_new
+
+        results = await asyncio.gather(*[process_author(author) for author in authors])
+        n_new_authors = sum([r for r in results if r is not None])
+        n_failed = sum([1 for r in results if r is None])
+
+        return n_new_authors, n_failed
 
     async def bfs_once(self):
         tasks = []
@@ -167,8 +173,7 @@ class AuthorWeaver:
         async for paper in self.cache.iterate_papers():
             tasks.append(self._process_paper_with_authors(paper))
         self.logger.info(f"Fetching authors from {len(tasks)} new papers")
-        success = await asyncio.gather(*tasks)
-        succ_count = sum([1 for s in success if s > 0])
-        fail_count = sum([1 for s in success if s <= 0])
-        fetched_count = sum(success)
-        self.logger.info(f"Found {fetched_count} authors from {succ_count} papers. {fail_count} papers do not have new authors.")
+        state = await asyncio.gather(*tasks)
+        paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
+        author_succ_count, author_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
+        self.logger.info(f"Found {author_succ_count} new authors from {paper_succ_count} papers. {author_fail_count} authors fetch failed. {paper_fail_count} papers fetch failed.")
