@@ -35,11 +35,3 @@ class WeaverCacheIface(metaclass=ABCMeta):
     @abstractmethod
     async def set_paper_info(self, paper: Paper, info: dict) -> None:
         raise NotImplementedError
-
-    @abstractmethod
-    async def is_link_author(self, paper: Paper, author: Author) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def link_author(self, paper: Paper, author: Author) -> None:
-        raise NotImplementedError

@@ -2,10 +2,11 @@ from abc import ABCMeta, abstractmethod
 import asyncio
 from typing import Tuple
 from .dataclass import Paper, Author
-from .iface import WeaverIface, WeaverCacheIface
+from .iface import WeaverIface
+from .iface_link import AuthorLinkWeaverCacheIface
 
 
-class Paper2AuthorsWeaverCacheIface(WeaverCacheIface, metaclass=ABCMeta):
+class Paper2AuthorsWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMeta):
 
     @abstractmethod
     async def get_authors_by_paper(self, paper: Paper) -> list[Author] | None:
