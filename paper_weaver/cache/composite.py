@@ -212,8 +212,8 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
             return None
         return [Paper(identifiers=ids) for ids in id_sets]
 
-    async def set_pending_papers(self, author: Author, papers: list[Paper]) -> None:
-        """Set pending papers for author (registers them for later processing)."""
+    async def add_pending_papers(self, author: Author, papers: list[Paper]) -> None:
+        """Add pending papers for author (registers them, merges with existing)."""
         author_cid = await self._get_author_canonical_id(author)
         registered_sets = await self._pending_papers_manager.add_pending_identifier_sets(
             author_cid, [p.identifiers for p in papers]
@@ -257,8 +257,8 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
             return None
         return [Author(identifiers=ids) for ids in id_sets]
 
-    async def set_pending_authors(self, paper: Paper, authors: list[Author]) -> None:
-        """Set pending authors for paper (registers them for later processing)."""
+    async def add_pending_authors(self, paper: Paper, authors: list[Author]) -> None:
+        """Add pending authors for paper (registers them, merges with existing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
         registered_sets = await self._pending_authors_manager.add_pending_identifier_sets(
             paper_cid, [a.identifiers for a in authors]
@@ -302,8 +302,8 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
             return None
         return [Paper(identifiers=ids) for ids in id_sets]
 
-    async def set_pending_references(self, paper: Paper, references: list[Paper]) -> None:
-        """Set pending references for paper (registers them for later processing)."""
+    async def add_pending_references(self, paper: Paper, references: list[Paper]) -> None:
+        """Add pending references for paper (registers them, merges with existing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
         registered_sets = await self._pending_references_manager.add_pending_identifier_sets(
             paper_cid, [r.identifiers for r in references]
@@ -347,8 +347,8 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             return None
         return [Paper(identifiers=ids) for ids in id_sets]
 
-    async def set_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
-        """Set pending citations for paper (registers them for later processing)."""
+    async def add_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
+        """Add pending citations for paper (registers them, merges with existing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
         registered_sets = await self._pending_citations_manager.add_pending_identifier_sets(
             paper_cid, [c.identifiers for c in citations]

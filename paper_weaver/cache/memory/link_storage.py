@@ -1,5 +1,5 @@
 """
-Memory implementations for link tracking and pending entity lists.
+Memory implementation for committed link tracking.
 """
 
 import asyncio

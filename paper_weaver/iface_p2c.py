@@ -2,7 +2,7 @@
 Paper to Citations weaver interface.
 
 Workflow:
-1. Get/set pending citations (objects may lack info, not written to DataDst)
+1. Get/add pending citations (objects may lack info, not written to DataDst)
 2. Process each citation to fetch info
 3. Commit link to DataDst once info is fetched
 """
@@ -20,7 +20,7 @@ class Paper2CitationsWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMe
     Cache interface for paper -> citations relationship.
 
     Pending citations: Temporarily cached citations that may not have info yet.
-    These are discoverable via iterate_papers() for later processing.
+    When added, citations are registered and become discoverable via iterate_papers().
     """
 
     @abstractmethod
@@ -29,8 +29,8 @@ class Paper2CitationsWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMe
         raise NotImplementedError
 
     @abstractmethod
-    async def set_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
-        """Set pending citations for paper (registers them for later processing)."""
+    async def add_pending_citations(self, paper: Paper, citations: list[Paper]) -> None:
+        """Add pending citations for paper (registers them, merges with existing)."""
         raise NotImplementedError
 
 
@@ -59,8 +59,8 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
             citations = await paper.get_citations(self.src)  # fetch from source
             if citations is None:  # failed to fetch
                 return None  # no new citations
-            # Cache pending citations (makes them discoverable via iterate_papers)
-            await self.cache.set_pending_citations(paper, citations)
+            # Cache pending citations (registers them, discoverable via iterate_papers)
+            await self.cache.add_pending_citations(paper, citations)
 
         # Step 3: Process each citation - fetch info and commit link
         async def process_citation(citation):

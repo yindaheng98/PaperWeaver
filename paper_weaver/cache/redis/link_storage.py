@@ -1,5 +1,5 @@
 """
-Redis implementations for link tracking and pending entity lists.
+Redis implementation for committed link tracking.
 """
 
 

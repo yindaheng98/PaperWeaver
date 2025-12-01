@@ -28,6 +28,3 @@ class RedisInfoStorage(InfoStorageIface):
 
     async def set_info(self, canonical_id: str, info: dict) -> None:
         await self._redis.set(self._key(canonical_id), json.dumps(info))
-
-    async def has_info(self, canonical_id: str) -> bool:
-        return await self._redis.exists(self._key(canonical_id)) > 0

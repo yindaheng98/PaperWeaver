@@ -2,7 +2,7 @@
 Paper to References weaver interface.
 
 Workflow:
-1. Get/set pending references (objects may lack info, not written to DataDst)
+1. Get/add pending references (objects may lack info, not written to DataDst)
 2. Process each reference to fetch info
 3. Commit link to DataDst once info is fetched
 """
@@ -20,7 +20,7 @@ class Paper2ReferencesWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCM
     Cache interface for paper -> references relationship.
 
     Pending references: Temporarily cached references that may not have info yet.
-    These are discoverable via iterate_papers() for later processing.
+    When added, references are registered and become discoverable via iterate_papers().
     """
 
     @abstractmethod
@@ -29,8 +29,8 @@ class Paper2ReferencesWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCM
         raise NotImplementedError
 
     @abstractmethod
-    async def set_pending_references(self, paper: Paper, references: list[Paper]) -> None:
-        """Set pending references for paper (registers them for later processing)."""
+    async def add_pending_references(self, paper: Paper, references: list[Paper]) -> None:
+        """Add pending references for paper (registers them, merges with existing)."""
         raise NotImplementedError
 
 
@@ -59,8 +59,8 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
             references = await paper.get_references(self.src)  # fetch from source
             if references is None:  # failed to fetch
                 return None  # no new references
-            # Cache pending references (makes them discoverable via iterate_papers)
-            await self.cache.set_pending_references(paper, references)
+            # Cache pending references (registers them, discoverable via iterate_papers)
+            await self.cache.add_pending_references(paper, references)
 
         # Step 3: Process each reference - fetch info and commit link
         async def process_reference(reference):

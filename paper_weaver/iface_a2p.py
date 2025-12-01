@@ -2,7 +2,7 @@
 Author to Papers weaver interface.
 
 Workflow:
-1. Get/set pending papers (objects may lack info, not written to DataDst)
+1. Get/add pending papers (objects may lack info, not written to DataDst)
 2. Process each paper to fetch info
 3. Commit link to DataDst once info is fetched
 """
@@ -20,7 +20,7 @@ class Author2PapersWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMet
     Cache interface for author -> papers relationship.
 
     Pending papers: Temporarily cached papers that may not have info yet.
-    These are discoverable via iterate_papers() for later processing.
+    When added, papers are registered and become discoverable via iterate_papers().
     """
 
     @abstractmethod
@@ -29,8 +29,8 @@ class Author2PapersWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMet
         raise NotImplementedError
 
     @abstractmethod
-    async def set_pending_papers(self, author: Author, papers: list[Paper]) -> None:
-        """Set pending papers for author (registers them for later processing)."""
+    async def add_pending_papers(self, author: Author, papers: list[Paper]) -> None:
+        """Add pending papers for author (registers them, merges with existing)."""
         raise NotImplementedError
 
 
@@ -59,8 +59,8 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
             papers = await author.get_papers(self.src)  # fetch from source
             if papers is None:  # failed to fetch
                 return None  # no new papers
-            # Cache pending papers (makes them discoverable via iterate_papers)
-            await self.cache.set_pending_papers(author, papers)
+            # Cache pending papers (registers them, discoverable via iterate_papers)
+            await self.cache.add_pending_papers(author, papers)
 
         # Step 3: Process each paper - fetch info and commit link
         async def process_paper(paper):

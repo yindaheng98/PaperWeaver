@@ -23,7 +23,3 @@ class MemoryInfoStorage(InfoStorageIface):
     async def set_info(self, canonical_id: str, info: dict) -> None:
         async with self._lock:
             self._data[canonical_id] = info
-
-    async def has_info(self, canonical_id: str) -> bool:
-        async with self._lock:
-            return canonical_id in self._data
