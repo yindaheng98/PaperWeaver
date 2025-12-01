@@ -3,19 +3,6 @@ from typing import Tuple
 from .dataclass import Paper, Author, DataSrc, DataDst
 
 
-class WeaverIface(metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def src(self) -> DataSrc:
-        raise ValueError("Model is not set")
-
-    @property
-    @abstractmethod
-    def dst(self) -> DataDst:
-        raise ValueError("Model is not set")
-
-
 class WeaverCacheIface(metaclass=ABCMeta):
 
     @abstractmethod
@@ -35,3 +22,21 @@ class WeaverCacheIface(metaclass=ABCMeta):
     @abstractmethod
     async def set_paper_info(self, paper: Paper, info: dict) -> None:
         raise NotImplementedError
+
+
+class WeaverIface(metaclass=ABCMeta):
+
+    @property
+    @abstractmethod
+    def src(self) -> DataSrc:
+        raise ValueError("DataSrc is not set")
+
+    @property
+    @abstractmethod
+    def dst(self) -> DataDst:
+        raise ValueError("DataDst is not set")
+
+    @property
+    @abstractmethod
+    def cache(self) -> WeaverCacheIface:
+        raise ValueError("Cache is not set")
