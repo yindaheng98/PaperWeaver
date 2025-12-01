@@ -13,7 +13,7 @@ class Paper2ReferencesWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCM
         raise NotImplementedError
 
     @abstractmethod
-    async def set_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
+    async def add_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
         raise NotImplementedError
 
 
@@ -43,7 +43,7 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
             if references is None:  # failed to fetch
                 return None  # no new references
             # Write references if fetched
-            await self.cache.set_references_of_paper(paper, references)
+            await self.cache.add_references_of_paper(paper, references)
 
         # Step 3: Fetch and save info for all references of this paper
         async def process_reference(reference):

@@ -13,7 +13,7 @@ class Author2PapersWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMet
         raise NotImplementedError
 
     @abstractmethod
-    async def set_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
+    async def add_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
         raise NotImplementedError
 
 
@@ -43,7 +43,7 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
             if papers is None:  # failed to fetch
                 return None  # no new papers
             # Write papers if fetched
-            await self.cache.set_papers_of_author(author, papers)
+            await self.cache.add_papers_of_author(author, papers)
 
         # Step 3: Fetch and save info for all papers of this author
         async def process_paper(paper):

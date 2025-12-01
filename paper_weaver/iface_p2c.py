@@ -13,7 +13,7 @@ class Paper2CitationsWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMe
         raise NotImplementedError
 
     @abstractmethod
-    async def set_citations_of_paper(self, paper: Paper, citations: list[Paper]) -> None:
+    async def add_citations_of_paper(self, paper: Paper, citations: list[Paper]) -> None:
         raise NotImplementedError
 
 
@@ -43,7 +43,7 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
             if citations is None:  # failed to fetch
                 return None  # no new citations
             # Write citations if fetched
-            await self.cache.set_citations_of_paper(paper, citations)
+            await self.cache.add_citations_of_paper(paper, citations)
 
         # Step 3: Fetch and save info for all citations of this paper
         async def process_citation(citation):

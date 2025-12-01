@@ -28,16 +28,6 @@ class MemoryLinkStorage(LinkStorageIface):
         async with self._lock:
             return from_id in self._links and to_id in self._links[from_id]
 
-    async def get_targets(self, from_id: str) -> Optional[Set[str]]:
-        async with self._lock:
-            if from_id not in self._links:
-                return None
-            return set(self._links[from_id])
-
-    async def set_targets(self, from_id: str, to_ids: Set[str]) -> None:
-        async with self._lock:
-            self._links[from_id] = set(to_ids)
-
 
 class MemoryEntityListStorage(EntityListStorageIface):
     """In-memory entity list storage."""

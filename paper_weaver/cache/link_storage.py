@@ -14,6 +14,7 @@ class LinkStorageIface(metaclass=ABCMeta):
     Interface for storing directional links between entities.
 
     Links are stored as (from_id, to_id) pairs.
+    Used for quick link existence checks (e.g., is author linked to paper?).
     """
 
     @abstractmethod
@@ -26,24 +27,14 @@ class LinkStorageIface(metaclass=ABCMeta):
         """Check if a link exists."""
         raise NotImplementedError
 
-    @abstractmethod
-    async def get_targets(self, from_id: str) -> Optional[Set[str]]:
-        """
-        Get all target IDs linked from a source.
-        Returns None if source has never been set (vs empty set if set but empty).
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    async def set_targets(self, from_id: str, to_ids: Set[str]) -> None:
-        """Set all targets for a source (replaces existing)."""
-        raise NotImplementedError
-
 
 class EntityListStorageIface(metaclass=ABCMeta):
     """
     Interface for storing ordered lists of entities associated with another entity.
     Used for: paper's authors, author's papers, paper's references, paper's citations.
+
+    Each entity in the list is represented by a set of identifiers.
+    Order is preserved (e.g., author order matters in papers).
     """
 
     @abstractmethod

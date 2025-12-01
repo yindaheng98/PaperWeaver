@@ -20,32 +20,11 @@ class RedisLinkStorage(LinkStorageIface):
     def _key(self, from_id: str) -> str:
         return f"{self._prefix}:{from_id}"
 
-    def _exists_key(self, from_id: str) -> str:
-        return f"{self._prefix}:exists:{from_id}"
-
     async def add_link(self, from_id: str, to_id: str) -> None:
-        pipe = self._redis.pipeline()
-        pipe.sadd(self._key(from_id), to_id)
-        pipe.set(self._exists_key(from_id), "1")
-        await pipe.execute()
+        await self._redis.sadd(self._key(from_id), to_id)
 
     async def has_link(self, from_id: str, to_id: str) -> bool:
         return await self._redis.sismember(self._key(from_id), to_id)
-
-    async def get_targets(self, from_id: str) -> Optional[Set[str]]:
-        exists = await self._redis.exists(self._exists_key(from_id))
-        if not exists:
-            return None
-        members = await self._redis.smembers(self._key(from_id))
-        return {m.decode() if isinstance(m, bytes) else m for m in members}
-
-    async def set_targets(self, from_id: str, to_ids: Set[str]) -> None:
-        pipe = self._redis.pipeline()
-        pipe.delete(self._key(from_id))
-        if to_ids:
-            pipe.sadd(self._key(from_id), *to_ids)
-        pipe.set(self._exists_key(from_id), "1")
-        await pipe.execute()
 
 
 class RedisEntityListStorage(EntityListStorageIface):

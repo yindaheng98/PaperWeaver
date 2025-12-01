@@ -210,7 +210,7 @@ class Author2PapersCache(AuthorLinkCache, Author2PapersWeaverCacheIface):
             papers.append(Paper(identifiers=all_identifiers))
         return papers
 
-    async def set_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
+    async def add_papers_of_author(self, author: Author, papers: list[Paper]) -> None:
         """Set papers for author."""
         author_cid = await self._get_author_canonical_id(author)
 
@@ -261,7 +261,7 @@ class Paper2AuthorsCache(AuthorLinkCache, Paper2AuthorsWeaverCacheIface):
             authors.append(Author(identifiers=all_identifiers))
         return authors
 
-    async def set_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
+    async def add_authors_of_paper(self, paper: Paper, authors: list[Author]) -> None:
         """Set authors for paper."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
@@ -311,7 +311,7 @@ class Paper2ReferencesCache(PaperLinkCache, Paper2ReferencesWeaverCacheIface):
             refs.append(Paper(identifiers=all_identifiers))
         return refs
 
-    async def set_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
+    async def add_references_of_paper(self, paper: Paper, references: list[Paper]) -> None:
         """Set references for paper."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
@@ -361,7 +361,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             cits.append(Paper(identifiers=all_identifiers))
         return cits
 
-    async def set_citations_of_paper(self, paper: Paper, citations: list[Paper]) -> None:
+    async def add_citations_of_paper(self, paper: Paper, citations: list[Paper]) -> None:
         """Set citations for paper."""
         paper_cid = await self._get_paper_canonical_id(paper)
 
