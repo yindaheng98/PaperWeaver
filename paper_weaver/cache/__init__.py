@@ -49,6 +49,10 @@ from .info_storage import (
 # Link Storage
 from .link_storage import (
     CommittedLinkStorageIface,
+)
+
+# Pending Storage
+from .pending_storage import (
     PendingListStorageIface,
     PendingListManager,
 )

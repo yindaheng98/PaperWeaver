@@ -1,3 +1,4 @@
 from .identifier import MemoryIdentifierRegistry
 from .info_storage import MemoryInfoStorage
-from .link_storage import MemoryCommittedLinkStorage, MemoryPendingListStorage
+from .link_storage import MemoryCommittedLinkStorage
+from .pending_storage import MemoryPendingListStorage
