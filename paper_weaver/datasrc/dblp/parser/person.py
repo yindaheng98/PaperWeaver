@@ -60,8 +60,6 @@ class PersonPageParser:
                 return child
         return None
 
-    # TODO: more fields from _person_element
-
     @property
     def affiliations(self) -> Iterator[str]:
         """Iterate over affiliations."""
@@ -69,6 +67,22 @@ class PersonPageParser:
         if person is not None:
             for note in person:
                 if note.tag == "note" and note.attrib.get("type") == "affiliation" and note.text:
+                    yield note.text
+
+    @property
+    def uname(self) -> str | None:
+        person = self._person_element
+        if person is not None:
+            for note in person:
+                if note.tag == "note" and note.attrib.get("type") == "uname" and note.text:
+                    return note.text
+
+    @property
+    def urls(self) -> Iterator[str]:
+        person = self._person_element
+        if person is not None:
+            for note in person:
+                if note.tag == "url" and note.text:
                     yield note.text
 
     @property
@@ -93,13 +107,21 @@ class PersonPageParser:
         result = {}
 
         if self.pid:
-            result["dblp_pid"] = self.pid
+            result["pid"] = self.pid
         if self.name:
             result["name"] = self.name
 
         affiliations = list(self.affiliations)
         if affiliations:
             result["affiliations"] = affiliations
+
+        uname = self.uname
+        if uname:
+            result["uname"] = uname
+
+        urls = list(self.urls)
+        if urls:
+            result["urls"] = urls
 
         return result
 
