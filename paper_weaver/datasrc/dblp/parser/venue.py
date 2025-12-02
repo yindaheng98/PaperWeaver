@@ -169,8 +169,6 @@ class VenuePageParser:
             if len(r_elem) > 0:
                 yield RecordParser(r_elem[0])
 
-    # TODO: more information in ".//dblpcites/r/inproceedings" is papers, but ".//dblpcites/r/proceedings" is proceedings info
-
     def __dict__(self) -> dict:
         """
         Convert to dictionary (excluding publications list).
