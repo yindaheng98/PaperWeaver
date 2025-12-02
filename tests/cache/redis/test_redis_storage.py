@@ -2,15 +2,24 @@
 Unit tests for Redis storage components.
 
 These tests verify that Redis implementations have identical behavior
-to Memory implementations. Uses fakeredis for testing without a real Redis server.
+to Memory implementations. Uses real Redis server if available at localhost:6379,
+otherwise falls back to fakeredis for testing.
 
 Run with: pytest tests/test_redis_storage.py -v
-Requires: pip install fakeredis
+Requires: pip install redis (and optionally fakeredis as fallback)
 """
 
 import pytest
+import pytest_asyncio
 
-# Try to import fakeredis, skip tests if not available
+# Try to import redis library
+try:
+    import redis.asyncio as aioredis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+
+# Try to import fakeredis as fallback
 try:
     import fakeredis.aioredis
     FAKEREDIS_AVAILABLE = True
@@ -31,9 +40,26 @@ from paper_weaver.cache import (
 )
 
 
+def _check_real_redis_connection():
+    """Check if real Redis server is available at localhost:6379."""
+    if not REDIS_AVAILABLE:
+        return False
+    try:
+        import redis
+        client = redis.Redis(host='localhost', port=6379)
+        client.ping()
+        client.close()
+        return True
+    except Exception:
+        return False
+
+
+REAL_REDIS_AVAILABLE = _check_real_redis_connection()
+
+# Skip tests if neither real Redis nor fakeredis is available
 pytestmark = pytest.mark.skipif(
-    not FAKEREDIS_AVAILABLE,
-    reason="fakeredis not installed. Run: pip install fakeredis"
+    not REAL_REDIS_AVAILABLE and not FAKEREDIS_AVAILABLE,
+    reason="Neither real Redis server (localhost:6379) nor fakeredis is available"
 )
 
 
@@ -41,10 +67,25 @@ pytestmark = pytest.mark.skipif(
 # Fixtures
 # =============================================================================
 
-@pytest.fixture
-def redis_client():
-    """Create a fake Redis client for testing."""
-    return fakeredis.aioredis.FakeRedis()
+@pytest_asyncio.fixture
+async def redis_client():
+    """
+    Create a Redis client for testing.
+    Uses real Redis at localhost:6379 if available, otherwise falls back to fakeredis.
+    """
+    if REAL_REDIS_AVAILABLE:
+        # Use real Redis server
+        client = aioredis.Redis(host='localhost', port=6379, db=15)  # Use db=15 for testing
+        # Clean the test database before use
+        await client.flushdb()
+        yield client
+        # Clean up after test
+        await client.flushdb()
+        await client.aclose()
+    else:
+        # Fall back to fakeredis
+        client = fakeredis.aioredis.FakeRedis()
+        yield client
 
 
 @pytest.fixture
@@ -103,7 +144,7 @@ class TestIdentifierRegistryParity:
         """Both should return a canonical ID when registering."""
         mem_cid = await memory_identifier_registry.register({"doi:123"})
         redis_cid = await redis_identifier_registry.register({"doi:123"})
-        
+
         assert mem_cid is not None
         assert redis_cid is not None
         # Both should start with "id_"
@@ -117,7 +158,7 @@ class TestIdentifierRegistryParity:
         """Both should return None for unregistered identifiers."""
         mem_result = await memory_identifier_registry.get_canonical_id({"unknown:999"})
         redis_result = await redis_identifier_registry.get_canonical_id({"unknown:999"})
-        
+
         assert mem_result is None
         assert redis_result is None
 
@@ -128,10 +169,10 @@ class TestIdentifierRegistryParity:
         """Both should find canonical ID after registration."""
         await memory_identifier_registry.register({"doi:123"})
         await redis_identifier_registry.register({"doi:123"})
-        
+
         mem_cid = await memory_identifier_registry.get_canonical_id({"doi:123"})
         redis_cid = await redis_identifier_registry.get_canonical_id({"doi:123"})
-        
+
         assert mem_cid is not None
         assert redis_cid is not None
 
@@ -142,10 +183,10 @@ class TestIdentifierRegistryParity:
         """Registering same identifiers should return same canonical ID."""
         mem_cid1 = await memory_identifier_registry.register({"doi:123"})
         mem_cid2 = await memory_identifier_registry.register({"doi:123"})
-        
+
         redis_cid1 = await redis_identifier_registry.register({"doi:123"})
         redis_cid2 = await redis_identifier_registry.register({"doi:123"})
-        
+
         assert mem_cid1 == mem_cid2
         assert redis_cid1 == redis_cid2
 
@@ -155,13 +196,13 @@ class TestIdentifierRegistryParity:
     ):
         """Both should return all identifiers for a canonical ID."""
         identifiers = {"doi:123", "arxiv:456", "pmid:789"}
-        
+
         mem_cid = await memory_identifier_registry.register(identifiers)
         redis_cid = await redis_identifier_registry.register(identifiers)
-        
+
         mem_all = await memory_identifier_registry.get_all_identifiers(mem_cid)
         redis_all = await redis_identifier_registry.get_all_identifiers(redis_cid)
-        
+
         assert mem_all == identifiers
         assert redis_all == identifiers
 
@@ -173,18 +214,18 @@ class TestIdentifierRegistryParity:
         # Register separate identifiers
         await memory_identifier_registry.register({"doi:A"})
         await memory_identifier_registry.register({"doi:B"})
-        
+
         await redis_identifier_registry.register({"doi:A"})
         await redis_identifier_registry.register({"doi:B"})
-        
+
         # Register overlapping set
         mem_cid = await memory_identifier_registry.register({"doi:A", "doi:B"})
         redis_cid = await redis_identifier_registry.register({"doi:A", "doi:B"})
-        
+
         # Both should have merged identifiers
         mem_all = await memory_identifier_registry.get_all_identifiers(mem_cid)
         redis_all = await redis_identifier_registry.get_all_identifiers(redis_cid)
-        
+
         assert "doi:A" in mem_all and "doi:B" in mem_all
         assert "doi:A" in redis_all and "doi:B" in redis_all
 
@@ -196,19 +237,19 @@ class TestIdentifierRegistryParity:
         await memory_identifier_registry.register({"doi:1"})
         await memory_identifier_registry.register({"doi:2"})
         await memory_identifier_registry.register({"doi:3"})
-        
+
         await redis_identifier_registry.register({"doi:1"})
         await redis_identifier_registry.register({"doi:2"})
         await redis_identifier_registry.register({"doi:3"})
-        
+
         mem_cids = []
         async for cid in memory_identifier_registry.iterate_canonical_ids():
             mem_cids.append(cid)
-        
+
         redis_cids = []
         async for cid in redis_identifier_registry.iterate_canonical_ids():
             redis_cids.append(cid)
-        
+
         assert len(mem_cids) == 3
         assert len(redis_cids) == 3
 
@@ -219,7 +260,7 @@ class TestIdentifierRegistryParity:
         """Both should return empty set for non-existent canonical ID."""
         mem_all = await memory_identifier_registry.get_all_identifiers("nonexistent")
         redis_all = await redis_identifier_registry.get_all_identifiers("nonexistent")
-        
+
         assert mem_all == set()
         assert redis_all == set()
 
@@ -240,7 +281,7 @@ class TestInfoStorageParity:
         """Both should return None when info not set."""
         mem_result = await memory_info_storage.get_info("cid_123")
         redis_result = await redis_info_storage.get_info("cid_123")
-        
+
         assert mem_result is None
         assert redis_result is None
 
@@ -250,13 +291,13 @@ class TestInfoStorageParity:
     ):
         """Both should store and retrieve info correctly."""
         info = {"title": "Test Paper", "year": 2024, "authors": ["Alice", "Bob"]}
-        
+
         await memory_info_storage.set_info("cid_123", info)
         await redis_info_storage.set_info("cid_123", info)
-        
+
         mem_result = await memory_info_storage.get_info("cid_123")
         redis_result = await redis_info_storage.get_info("cid_123")
-        
+
         assert mem_result == info
         assert redis_result == info
 
@@ -267,13 +308,13 @@ class TestInfoStorageParity:
         """Both should overwrite existing info."""
         await memory_info_storage.set_info("cid_123", {"title": "Old"})
         await memory_info_storage.set_info("cid_123", {"title": "New"})
-        
+
         await redis_info_storage.set_info("cid_123", {"title": "Old"})
         await redis_info_storage.set_info("cid_123", {"title": "New"})
-        
+
         mem_result = await memory_info_storage.get_info("cid_123")
         redis_result = await redis_info_storage.get_info("cid_123")
-        
+
         assert mem_result["title"] == "New"
         assert redis_result["title"] == "New"
 
@@ -293,13 +334,13 @@ class TestInfoStorageParity:
                 {"name": "Bob", "affiliation": "Stanford"}
             ]
         }
-        
+
         await memory_info_storage.set_info("cid_123", info)
         await redis_info_storage.set_info("cid_123", info)
-        
+
         mem_result = await memory_info_storage.get_info("cid_123")
         redis_result = await redis_info_storage.get_info("cid_123")
-        
+
         assert mem_result == info
         assert redis_result == info
 
@@ -310,10 +351,10 @@ class TestInfoStorageParity:
         """Both should handle empty dict."""
         await memory_info_storage.set_info("cid_123", {})
         await redis_info_storage.set_info("cid_123", {})
-        
+
         mem_result = await memory_info_storage.get_info("cid_123")
         redis_result = await redis_info_storage.get_info("cid_123")
-        
+
         assert mem_result == {}
         assert redis_result == {}
 
@@ -334,7 +375,7 @@ class TestCommittedLinkStorageParity:
         """Both should return False for uncommitted links."""
         mem_result = await memory_link_storage.is_link_committed("paper1", "author1")
         redis_result = await redis_link_storage.is_link_committed("paper1", "author1")
-        
+
         assert not mem_result
         assert not redis_result
 
@@ -345,10 +386,10 @@ class TestCommittedLinkStorageParity:
         """Both should commit and find links."""
         await memory_link_storage.commit_link("paper1", "author1")
         await redis_link_storage.commit_link("paper1", "author1")
-        
+
         mem_result = await memory_link_storage.is_link_committed("paper1", "author1")
         redis_result = await redis_link_storage.is_link_committed("paper1", "author1")
-        
+
         assert mem_result
         assert redis_result
 
@@ -359,11 +400,11 @@ class TestCommittedLinkStorageParity:
         """Both should respect link directionality."""
         await memory_link_storage.commit_link("A", "B")
         await redis_link_storage.commit_link("A", "B")
-        
+
         # A->B should be committed
         assert await memory_link_storage.is_link_committed("A", "B")
         assert await redis_link_storage.is_link_committed("A", "B")
-        
+
         # B->A should NOT be committed
         assert not await memory_link_storage.is_link_committed("B", "A")
         assert not await redis_link_storage.is_link_committed("B", "A")
@@ -376,11 +417,11 @@ class TestCommittedLinkStorageParity:
         for target in ["T1", "T2", "T3"]:
             await memory_link_storage.commit_link("source", target)
             await redis_link_storage.commit_link("source", target)
-        
+
         for target in ["T1", "T2", "T3"]:
             assert await memory_link_storage.is_link_committed("source", target)
             assert await redis_link_storage.is_link_committed("source", target)
-        
+
         assert not await memory_link_storage.is_link_committed("source", "T4")
         assert not await redis_link_storage.is_link_committed("source", "T4")
 
@@ -393,7 +434,7 @@ class TestCommittedLinkStorageParity:
         for _ in range(3):
             await memory_link_storage.commit_link("A", "B")
             await redis_link_storage.commit_link("A", "B")
-        
+
         assert await memory_link_storage.is_link_committed("A", "B")
         assert await redis_link_storage.is_link_committed("A", "B")
 
@@ -414,7 +455,7 @@ class TestPendingListStorageParity:
         """Both should return None when pending list not set."""
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         assert mem_result is None
         assert redis_result is None
 
@@ -424,20 +465,20 @@ class TestPendingListStorageParity:
     ):
         """Both should store and retrieve pending lists correctly."""
         items = [{"doi:1"}, {"doi:2", "arxiv:2"}]
-        
+
         await memory_pending_storage.set_pending_identifier_sets("author1", items)
         await redis_pending_storage.set_pending_identifier_sets("author1", items)
-        
+
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         assert len(mem_result) == 2
         assert len(redis_result) == 2
-        
+
         # Check contents (order may vary)
         mem_sets = [frozenset(s) for s in mem_result]
         redis_sets = [frozenset(s) for s in redis_result]
-        
+
         assert frozenset({"doi:1"}) in mem_sets
         assert frozenset({"doi:2", "arxiv:2"}) in mem_sets
         assert frozenset({"doi:1"}) in redis_sets
@@ -450,10 +491,10 @@ class TestPendingListStorageParity:
         """Both should distinguish between empty list and not set."""
         await memory_pending_storage.set_pending_identifier_sets("author1", [])
         await redis_pending_storage.set_pending_identifier_sets("author1", [])
-        
+
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         # Should be empty list, not None
         assert mem_result is not None
         assert redis_result is not None
@@ -467,13 +508,13 @@ class TestPendingListStorageParity:
         """Both should overwrite existing pending lists."""
         await memory_pending_storage.set_pending_identifier_sets("author1", [{"doi:1"}])
         await memory_pending_storage.set_pending_identifier_sets("author1", [{"doi:2"}, {"doi:3"}])
-        
+
         await redis_pending_storage.set_pending_identifier_sets("author1", [{"doi:1"}])
         await redis_pending_storage.set_pending_identifier_sets("author1", [{"doi:2"}, {"doi:3"}])
-        
+
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         assert len(mem_result) == 2
         assert len(redis_result) == 2
 
@@ -483,13 +524,13 @@ class TestPendingListStorageParity:
     ):
         """Both should handle single item lists."""
         items = [{"doi:single"}]
-        
+
         await memory_pending_storage.set_pending_identifier_sets("author1", items)
         await redis_pending_storage.set_pending_identifier_sets("author1", items)
-        
+
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         assert len(mem_result) == 1
         assert len(redis_result) == 1
         assert {"doi:single"} in mem_result
@@ -502,13 +543,13 @@ class TestPendingListStorageParity:
         """Both should handle large identifier sets."""
         large_set = {f"id:{i}" for i in range(100)}
         items = [large_set]
-        
+
         await memory_pending_storage.set_pending_identifier_sets("author1", items)
         await redis_pending_storage.set_pending_identifier_sets("author1", items)
-        
+
         mem_result = await memory_pending_storage.get_pending_identifier_sets("author1")
         redis_result = await redis_pending_storage.get_pending_identifier_sets("author1")
-        
+
         assert len(mem_result) == 1
         assert len(redis_result) == 1
         assert len(mem_result[0]) == 100
@@ -521,4 +562,3 @@ class TestPendingListStorageParity:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-
