@@ -11,7 +11,7 @@ Venue index pages contain:
 Example: https://dblp.org/db/conf/cvpr/cvpr2016.xml
 """
 
-import re
+import xml.etree.ElementTree as ElementTree
 from typing import Iterator
 
 from .record import RecordParser, _parse_xml
@@ -45,23 +45,48 @@ class VenuePageParser:
             raise ValueError(f"Expected <bht> root element, got <{self.data.tag}>")
 
     @property
+    def key(self) -> str | None:
+        """Get venue title."""
+        return self.data.attrib.get("key")
+
+    @property
     def title(self) -> str | None:
         """Get venue title."""
         return self.data.attrib.get("title")
 
     @property
-    def volume_refs(self) -> Iterator[str]:
+    def href(self) -> str | None:
         """
-        Iterate over volume reference keys.
-
-        These are paths to sub-pages (e.g., individual years/volumes).
+        Get volume reference keys.
         """
         for ref in self.data.findall(".//ref"):
             href = ref.attrib.get("href", "")
             if href:
-                # Remove .html extension
-                vol_key = re.sub(r"\.html$", "", href)
-                yield vol_key
+                return href
+
+    @property
+    def ref(self) -> str | None:
+        """
+        Get volume reference name.
+        """
+        for ref in self.data.findall(".//ref"):
+            return ref.text
+
+    @property
+    def h2(self) -> str | None:
+        """
+        Get h2.
+        """
+        for h in self.data.findall(".//h2"):
+            return h.text
+
+    @property
+    def h3(self) -> str | None:
+        """
+        Get h3.
+        """
+        for h in self.data.findall(".//h3"):
+            return h.text
 
     # TODO: more information in ".//dblpcites/r/proceedings" elements
 
@@ -88,12 +113,23 @@ class VenuePageParser:
         """
         result = {}
 
+        if self.key:
+            result["key"] = self.key
+
         if self.title:
             result["title"] = self.title
 
-        volume_refs = list(self.volume_refs)
-        if volume_refs:
-            result["volume_refs"] = volume_refs
+        if self.href:
+            result["href"] = self.href
+
+        if self.ref:
+            result["ref"] = self.ref
+
+        if self.h2:
+            result["h2"] = self.h2
+
+        if self.h3:
+            result["h3"] = self.h3
 
         return result
 
