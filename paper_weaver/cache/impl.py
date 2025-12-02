@@ -1,15 +1,12 @@
 """
-Composite Cache - Combines storage components into full cache implementations.
+Base Composable Cache - Foundation for all cache implementations.
 
-Allows flexible composition of different storage backends for:
-- Identifier registry (memory/redis)
-- Info storage (memory/redis)
-- Committed link storage (memory/redis)
-- Pending list storage (memory/redis)
+Provides ComposableCacheBase with:
+- Paper info management (get/set paper info, iterate papers)
+- Author info management (get/set author info, iterate authors)
+- Identifier merging and canonical ID resolution
 
-Key concepts:
-- Committed links: Links that have been written to DataDst
-- Pending lists: Entity lists that may not have info yet, awaiting processing
+This is the base class that other cache implementations extend.
 """
 
 from typing import AsyncIterator, Tuple

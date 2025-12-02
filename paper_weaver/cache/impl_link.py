@@ -1,15 +1,11 @@
 """
-Composite Cache - Combines storage components into full cache implementations.
+Link Cache - Caches with committed link tracking.
 
-Allows flexible composition of different storage backends for:
-- Identifier registry (memory/redis)
-- Info storage (memory/redis)
-- Committed link storage (memory/redis)
-- Pending list storage (memory/redis)
+Provides:
+- AuthorLinkCache: Tracks paper-author links committed to DataDst
+- PaperLinkCache: Tracks paper-paper links (references/citations) committed to DataDst
 
-Key concepts:
-- Committed links: Links that have been written to DataDst
-- Pending lists: Entity lists that may not have info yet, awaiting processing
+Committed links represent relationships that have been written to DataDst.
 """
 
 

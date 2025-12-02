@@ -1,15 +1,9 @@
 """
-Composite Cache - Combines storage components into full cache implementations.
+Author to Papers Cache - Cache for author -> papers relationships.
 
-Allows flexible composition of different storage backends for:
-- Identifier registry (memory/redis)
-- Info storage (memory/redis)
-- Committed link storage (memory/redis)
-- Pending list storage (memory/redis)
-
-Key concepts:
-- Committed links: Links that have been written to DataDst
-- Pending lists: Entity lists that may not have info yet, awaiting processing
+Provides Author2PapersCache with:
+- Pending papers management for authors
+- Author-paper link tracking (inherited from AuthorLinkCache)
 """
 
 

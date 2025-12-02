@@ -1,15 +1,9 @@
 """
-Composite Cache - Combines storage components into full cache implementations.
+Full Combined Caches - Complete cache implementations combining multiple capabilities.
 
-Allows flexible composition of different storage backends for:
-- Identifier registry (memory/redis)
-- Info storage (memory/redis)
-- Committed link storage (memory/redis)
-- Pending list storage (memory/redis)
-
-Key concepts:
-- Committed links: Links that have been written to DataDst
-- Pending lists: Entity lists that may not have info yet, awaiting processing
+Provides:
+- FullAuthorWeaverCache: Combines Author2Papers and Paper2Authors for AuthorWeaver
+- FullPaperWeaverCache: Combines Paper2References, Paper2Citations, and Paper2Authors
 """
 
 
