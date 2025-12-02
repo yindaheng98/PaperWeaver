@@ -2,12 +2,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pytest",
+            "name": "pytest memory cache",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
-                "tests/",
+                "tests/cache/memory",
+                "-v"
+            ]
+        },
+        {
+            "name": "pytest redis cache",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/cache/redis",
                 "-v"
             ]
         }
