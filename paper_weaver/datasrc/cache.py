@@ -31,18 +31,19 @@ class DataSrcCacheIface(ABC):
             key: Cache key
 
         Returns:
-            Cached value or None if not found
+            Cached value or None if not found (or expired)
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def set(self, key: str, value: Any) -> None:
+    async def set(self, key: str, value: Any, expire: float | None = None) -> None:
         """
-        Set cache value for key.
+        Set cache value for key with optional expiration.
 
         Args:
             key: Cache key
             value: Value to cache
+            expire: Time-to-live in seconds. None means no expiration.
         """
         raise NotImplementedError
 
@@ -73,7 +74,8 @@ class CachedAsyncPool:
     async def get_or_fetch(
         self,
         key: str,
-        fetcher: Callable[[], Awaitable[T]]
+        fetcher: Callable[[], Awaitable[T]],
+        expire: float | None = None
     ) -> T | None:
         """
         Get value from cache or fetch using the provided callable.
@@ -89,6 +91,7 @@ class CachedAsyncPool:
         Args:
             key: Cache key
             fetcher: Async callable (lambda) that fetches the data if not cached
+            expire: Time-to-live in seconds for cached value. None means no expiration.
 
         Returns:
             Cached or fetched value, or None if fetch returns None
@@ -109,7 +112,7 @@ class CachedAsyncPool:
                 task = self._pending[key]
             else:
                 # Create task for this key
-                task = asyncio.create_task(self._fetch_and_cache(key, fetcher))
+                task = asyncio.create_task(self._fetch_and_cache(key, fetcher, expire))
                 self._pending[key] = task
 
         # Wait for result outside the lock
@@ -118,7 +121,8 @@ class CachedAsyncPool:
     async def _fetch_and_cache(
         self,
         key: str,
-        fetcher: Callable[[], Awaitable[T]]
+        fetcher: Callable[[], Awaitable[T]],
+        expire: float | None = None
     ) -> T | None:
         """
         Fetch data using the fetcher and cache if not None.
@@ -126,6 +130,7 @@ class CachedAsyncPool:
         Args:
             key: Cache key
             fetcher: Async callable that fetches the data
+            expire: Time-to-live in seconds for cached value. None means no expiration.
 
         Returns:
             Fetched value or None
@@ -134,7 +139,7 @@ class CachedAsyncPool:
             async with self._semaphore:
                 result = await fetcher()
                 if result is not None:
-                    await self._cache.set(key, result)
+                    await self._cache.set(key, result, expire)
                 return result
         finally:
             # Clean up pending entry after task completes
