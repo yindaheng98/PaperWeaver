@@ -7,11 +7,8 @@ deduplicates requests for the same cache key.
 """
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Callable, Awaitable, Any
+from typing import Callable, Awaitable
 import asyncio
-
-
-T = TypeVar('T')
 
 
 class DataSrcCacheIface(ABC):
@@ -23,7 +20,7 @@ class DataSrcCacheIface(ABC):
     """
 
     @abstractmethod
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> str | None:
         """
         Get cached value by key.
 
@@ -31,18 +28,18 @@ class DataSrcCacheIface(ABC):
             key: Cache key
 
         Returns:
-            Cached value or None if not found (or expired)
+            Cached string value or None if not found (or expired)
         """
         raise NotImplementedError
 
     @abstractmethod
-    async def set(self, key: str, value: Any, expire: float | None = None) -> None:
+    async def set(self, key: str, value: str, expire: float | None = None) -> None:
         """
         Set cache value for key with optional expiration.
 
         Args:
             key: Cache key
-            value: Value to cache
+            value: String value to cache
             expire: Time-to-live in seconds. None means no expiration.
         """
         raise NotImplementedError
@@ -74,9 +71,9 @@ class CachedAsyncPool:
     async def get_or_fetch(
         self,
         key: str,
-        fetcher: Callable[[], Awaitable[T]],
+        fetcher: Callable[[], Awaitable[str | None]],
         expire: float | None = None
-    ) -> T | None:
+    ) -> str | None:
         """
         Get value from cache or fetch using the provided callable.
 
@@ -90,11 +87,11 @@ class CachedAsyncPool:
 
         Args:
             key: Cache key
-            fetcher: Async callable (lambda) that fetches the data if not cached
+            fetcher: Async callable (lambda) that fetches the string data if not cached
             expire: Time-to-live in seconds for cached value. None means no expiration.
 
         Returns:
-            Cached or fetched value, or None if fetch returns None
+            Cached or fetched string value, or None if fetch returns None
         """
         # Check cache first (fast path, no lock)
         cached = await self._cache.get(key)
@@ -121,19 +118,19 @@ class CachedAsyncPool:
     async def _fetch_and_cache(
         self,
         key: str,
-        fetcher: Callable[[], Awaitable[T]],
+        fetcher: Callable[[], Awaitable[str | None]],
         expire: float | None = None
-    ) -> T | None:
+    ) -> str | None:
         """
         Fetch data using the fetcher and cache if not None.
 
         Args:
             key: Cache key
-            fetcher: Async callable that fetches the data
+            fetcher: Async callable that fetches the string data
             expire: Time-to-live in seconds for cached value. None means no expiration.
 
         Returns:
-            Fetched value or None
+            Fetched string value or None
         """
         try:
             async with self._semaphore:

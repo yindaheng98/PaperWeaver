@@ -27,9 +27,9 @@ class TestMemoryDataSrcCache:
     @pytest.mark.asyncio
     async def test_set_and_get(self, cache):
         """Test setting and getting a value."""
-        await cache.set("key1", {"data": "value1"})
+        await cache.set("key1", "value1")
         result = await cache.get("key1")
-        assert result == {"data": "value1"}
+        assert result == "value1"
 
     @pytest.mark.asyncio
     async def test_overwrite_value(self, cache):
@@ -51,23 +51,23 @@ class TestMemoryDataSrcCache:
         assert await cache.get("key3") == "value3"
 
     @pytest.mark.asyncio
-    async def test_various_value_types(self, cache):
-        """Test caching various value types."""
-        # String
+    async def test_various_string_values(self, cache):
+        """Test caching various string values."""
+        # Simple string
         await cache.set("str_key", "string_value")
         assert await cache.get("str_key") == "string_value"
 
-        # Dict
-        await cache.set("dict_key", {"nested": {"data": 123}})
-        assert await cache.get("dict_key") == {"nested": {"data": 123}}
+        # Empty string
+        await cache.set("empty_key", "")
+        assert await cache.get("empty_key") == ""
 
-        # List
-        await cache.set("list_key", [1, 2, 3, "four"])
-        assert await cache.get("list_key") == [1, 2, 3, "four"]
+        # JSON-like string
+        await cache.set("json_key", '{"nested": {"data": 123}}')
+        assert await cache.get("json_key") == '{"nested": {"data": 123}}'
 
-        # Int
-        await cache.set("int_key", 42)
-        assert await cache.get("int_key") == 42
+        # Unicode string
+        await cache.set("unicode_key", "你好世界 🌍")
+        assert await cache.get("unicode_key") == "你好世界 🌍"
 
     @pytest.mark.asyncio
     async def test_concurrent_access(self, cache):
@@ -114,11 +114,11 @@ class TestCachedAsyncPool:
         async def fetcher():
             nonlocal fetch_count
             fetch_count += 1
-            return {"data": "fetched_value"}
+            return "fetched_value"
 
         result = await pool.get_or_fetch("key1", fetcher)
 
-        assert result == {"data": "fetched_value"}
+        assert result == "fetched_value"
         assert fetch_count == 1
 
     @pytest.mark.asyncio
@@ -349,17 +349,17 @@ class TestCachedAsyncPoolEdgeCases:
 
     @pytest.mark.asyncio
     async def test_large_value(self):
-        """Test caching large values."""
+        """Test caching large string values."""
         cache = MemoryDataSrcCache()
         pool = CachedAsyncPool(cache, max_concurrent=3)
 
-        large_data = {"items": list(range(10000))}
+        large_string = "x" * 100000  # 100KB string
 
         async def fetcher():
-            return large_data
+            return large_string
 
         result = await pool.get_or_fetch("key1", fetcher)
-        assert result == large_data
+        assert result == large_string
 
     @pytest.mark.asyncio
     async def test_concurrent_different_and_same_keys(self):

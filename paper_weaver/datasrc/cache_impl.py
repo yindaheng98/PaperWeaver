@@ -6,7 +6,6 @@ The pool manages concurrent async operations with a semaphore and
 deduplicates requests for the same cache key.
 """
 
-from typing import Any
 import asyncio
 import time
 
@@ -18,10 +17,10 @@ class MemoryDataSrcCache(DataSrcCacheIface):
 
     def __init__(self):
         # Store tuples of (value, expire_at) where expire_at is None or timestamp
-        self._data: dict[str, tuple[Any, float | None]] = {}
+        self._data: dict[str, tuple[str, float | None]] = {}
         self._lock = asyncio.Lock()
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> str | None:
         async with self._lock:
             entry = self._data.get(key)
             if entry is None:
@@ -35,7 +34,7 @@ class MemoryDataSrcCache(DataSrcCacheIface):
 
             return value
 
-    async def set(self, key: str, value: Any, expire: float | None = None) -> None:
+    async def set(self, key: str, value: str, expire: float | None = None) -> None:
         async with self._lock:
             expire_at = None
             if expire is not None:
