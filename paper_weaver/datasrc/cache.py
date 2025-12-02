@@ -47,22 +47,6 @@ class DataSrcCacheIface(ABC):
         raise NotImplementedError
 
 
-class MemoryDataSrcCache(DataSrcCacheIface):
-    """Simple in-memory cache implementation."""
-
-    def __init__(self):
-        self._data: dict[str, Any] = {}
-        self._lock = asyncio.Lock()
-
-    async def get(self, key: str) -> Any | None:
-        async with self._lock:
-            return self._data.get(key)
-
-    async def set(self, key: str, value: Any) -> None:
-        async with self._lock:
-            self._data[key] = value
-
-
 class CachedAsyncPool:
     """
     Async pool with caching support for DataSrc operations.
@@ -85,11 +69,6 @@ class CachedAsyncPool:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._pending: dict[str, asyncio.Task] = {}
         self._lock = asyncio.Lock()
-
-    @property
-    def cache(self) -> DataSrcCacheIface:
-        """Get the underlying cache instance."""
-        return self._cache
 
     async def get_or_fetch(
         self,
