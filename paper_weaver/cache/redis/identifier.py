@@ -6,6 +6,9 @@ When objects are merged, their identifier sets are combined.
 """
 
 import asyncio
+from typing import AsyncIterator
+
+from redis.asyncio import Redis
 
 from ..identifier import IdentifierRegistryIface
 
@@ -13,7 +16,7 @@ from ..identifier import IdentifierRegistryIface
 class RedisIdentifierRegistry(IdentifierRegistryIface):
     """Redis implementation of identifier registry."""
 
-    def __init__(self, redis_client, prefix: str = "idreg"):
+    def __init__(self, redis_client: Redis, prefix: str = "idreg"):
         self._redis = redis_client
         self._prefix = prefix
         self._lock = asyncio.Lock()
@@ -91,7 +94,7 @@ class RedisIdentifierRegistry(IdentifierRegistryIface):
         members = await self._redis.smembers(self._canonical_key(canonical_id))
         return {m.decode() if isinstance(m, bytes) else m for m in members}
 
-    async def iterate_canonical_ids(self):
+    async def iterate_canonical_ids(self) -> AsyncIterator[str]:
         members = await self._redis.smembers(self._all_canonicals_key())
         for m in members:
             yield m.decode() if isinstance(m, bytes) else m

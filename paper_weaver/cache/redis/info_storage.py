@@ -6,13 +6,15 @@ Separated from relationship storage for flexible composition.
 
 import json
 
+from redis.asyncio import Redis
+
 from ..info_storage import InfoStorageIface
 
 
 class RedisInfoStorage(InfoStorageIface):
     """Redis info storage."""
 
-    def __init__(self, redis_client, prefix: str = "info"):
+    def __init__(self, redis_client: Redis, prefix: str = "info"):
         self._redis = redis_client
         self._prefix = prefix
 

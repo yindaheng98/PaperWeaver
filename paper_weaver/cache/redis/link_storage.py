@@ -2,6 +2,7 @@
 Redis implementation for committed link tracking.
 """
 
+from redis.asyncio import Redis
 
 from ..link_storage import CommittedLinkStorageIface
 
@@ -9,7 +10,7 @@ from ..link_storage import CommittedLinkStorageIface
 class RedisCommittedLinkStorage(CommittedLinkStorageIface):
     """Redis storage for committed links using sets."""
 
-    def __init__(self, redis_client, prefix: str = "committed"):
+    def __init__(self, redis_client: Redis, prefix: str = "committed"):
         self._redis = redis_client
         self._prefix = prefix
 

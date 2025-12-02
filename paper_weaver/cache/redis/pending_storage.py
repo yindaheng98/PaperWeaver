@@ -4,13 +4,15 @@ Redis implementations for pending entity lists.
 
 import json
 
+from redis.asyncio import Redis
+
 from ..pending_storage import PendingListStorageIface
 
 
 class RedisPendingListStorage(PendingListStorageIface):
     """Redis storage for pending entity lists using JSON."""
 
-    def __init__(self, redis_client, prefix: str = "pending"):
+    def __init__(self, redis_client: Redis, prefix: str = "pending"):
         self._redis = redis_client
         self._prefix = prefix
 
