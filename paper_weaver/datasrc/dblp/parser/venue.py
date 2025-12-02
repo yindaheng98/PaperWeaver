@@ -91,6 +91,73 @@ class VenuePageParser:
     # TODO: more information in ".//dblpcites/r/proceedings" elements
 
     @property
+    def _proceedings_element(self) -> ElementTree.Element | None:
+        """Get the proceedings element."""
+        for proceedings in self.data.findall(".//dblpcites/r/proceedings"):
+            return proceedings
+
+    @property
+    def proceedings_title(self) -> str | None:
+        """Get proceedings title."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for title in proceedings.findall("title"):
+                return title.text
+
+    @property
+    def proceedings_booktitle(self) -> str | None:
+        """Get proceedings booktitle."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for booktitle in proceedings.findall("booktitle"):
+                return booktitle.text
+
+    @property
+    def proceedings_publisher(self) -> str | None:
+        """Get proceedings publisher."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for publisher in proceedings.findall("publisher"):
+                return publisher.text
+
+    @property
+    def proceedings_isbn(self) -> str | None:
+        """Get proceedings ISBN."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for isbn in proceedings.findall("isbn"):
+                return isbn.text
+
+    @property
+    def proceedings_url(self) -> str | None:
+        """Get proceedings URL."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for url in proceedings.findall("url"):
+                return url.text
+
+    @property
+    def proceedings_year(self) -> int | None:
+        """Get proceedings year."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for year in proceedings.findall("year"):
+                if year.text:
+                    try:
+                        return int(year.text)
+                    except ValueError:
+                        return None
+
+    @property
+    def proceedings_ees(self) -> Iterator[str]:
+        """Iterate over proceedings ees (electronic editions)."""
+        proceedings = self._proceedings_element
+        if proceedings is not None:
+            for ee in proceedings.findall("ee"):
+                if ee.text:
+                    yield ee.text
+
+    @property
     def publications(self) -> Iterator[RecordParser]:
         """
         Iterate over publications directly listed in this venue page.
@@ -130,6 +197,27 @@ class VenuePageParser:
 
         if self.h3:
             result["h3"] = self.h3
+
+        if self.proceedings_title:
+            result["proceedings_title"] = self.proceedings_title
+
+        if self.proceedings_booktitle:
+            result["proceedings_booktitle"] = self.proceedings_booktitle
+
+        if self.proceedings_publisher:
+            result["proceedings_publisher"] = self.proceedings_publisher
+
+        if self.proceedings_isbn:
+            result["proceedings_isbn"] = self.proceedings_isbn
+
+        if self.proceedings_url:
+            result["proceedings_url"] = self.proceedings_url
+
+        if self.proceedings_year:
+            result["proceedings_year"] = self.proceedings_year
+
+        if list(self.proceedings_ees):
+            result["proceedings_ees"] = list(self.proceedings_ees)
 
         return result
 
