@@ -33,14 +33,14 @@ class DataSrcCacheIface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def set(self, key: str, value: str, expire: float | None = None) -> None:
+    async def set(self, key: str, value: str, expire: int | None = None) -> None:
         """
         Set cache value for key with optional expiration.
 
         Args:
             key: Cache key
             value: String value to cache
-            expire: Time-to-live in seconds. None means no expiration.
+            expire: Time-to-live in seconds (integer). None means no expiration.
         """
         raise NotImplementedError
 
@@ -72,7 +72,7 @@ class CachedAsyncPool:
         self,
         key: str,
         fetcher: Callable[[], Awaitable[str | None]],
-        expire: float | None = None
+        expire: int | None = None
     ) -> str | None:
         """
         Get value from cache or fetch using the provided callable.
@@ -88,7 +88,7 @@ class CachedAsyncPool:
         Args:
             key: Cache key
             fetcher: Async callable (lambda) that fetches the string data if not cached
-            expire: Time-to-live in seconds for cached value. None means no expiration.
+            expire: Time-to-live in seconds (integer) for cached value. None means no expiration.
 
         Returns:
             Cached or fetched string value, or None if fetch returns None
@@ -119,7 +119,7 @@ class CachedAsyncPool:
         self,
         key: str,
         fetcher: Callable[[], Awaitable[str | None]],
-        expire: float | None = None
+        expire: int | None = None
     ) -> str | None:
         """
         Fetch data using the fetcher and cache if not None.
@@ -127,7 +127,7 @@ class CachedAsyncPool:
         Args:
             key: Cache key
             fetcher: Async callable that fetches the string data
-            expire: Time-to-live in seconds for cached value. None means no expiration.
+            expire: Time-to-live in seconds (integer) for cached value. None means no expiration.
 
         Returns:
             Fetched string value or None

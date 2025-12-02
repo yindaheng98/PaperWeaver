@@ -22,6 +22,28 @@
                 "tests/cache/redis",
                 "-v"
             ]
-        }
+        },
+        {
+            "name": "pytest memory datasrc cache",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/datasrc/cache/memory",
+                "-v"
+            ]
+        },
+        {   
+            // docker run --name redis --rm -it -p 6379:6379 redis:latest
+            // docker run --name kvrocks --rm -it -p 6379:6666 apache/kvrocks --bind 0.0.0.0
+            "name": "pytest redis datasrc cache",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/datasrc/cache/redis",
+                "-v"
+            ]
+        },
     ]
 }

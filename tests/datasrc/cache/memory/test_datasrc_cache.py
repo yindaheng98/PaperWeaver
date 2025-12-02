@@ -460,21 +460,21 @@ class TestMemoryDataSrcCacheExpiration:
     @pytest.mark.asyncio
     async def test_set_with_expire_not_expired(self, cache):
         """Test that value is accessible before expiration."""
-        await cache.set("key1", "value1", expire=10.0)  # 10 seconds
+        await cache.set("key1", "value1", expire=60)  # 60 seconds
         result = await cache.get("key1")
         assert result == "value1"
 
     @pytest.mark.asyncio
     async def test_set_with_expire_expired(self, cache):
         """Test that value expires after TTL."""
-        await cache.set("key1", "value1", expire=0.05)  # 50ms
+        await cache.set("key1", "value1", expire=1)  # 1 second
 
         # Value should be accessible immediately
         result = await cache.get("key1")
         assert result == "value1"
 
         # Wait for expiration
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1.1)
 
         # Value should be expired now
         result = await cache.get("key1")
@@ -483,10 +483,10 @@ class TestMemoryDataSrcCacheExpiration:
     @pytest.mark.asyncio
     async def test_expire_removes_entry(self, cache):
         """Test that expired entry is removed from internal storage."""
-        await cache.set("key1", "value1", expire=0.05)
+        await cache.set("key1", "value1", expire=1)
 
         # Wait for expiration
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1.1)
 
         # Access to trigger cleanup
         await cache.get("key1")
@@ -497,43 +497,32 @@ class TestMemoryDataSrcCacheExpiration:
     @pytest.mark.asyncio
     async def test_different_expire_times(self, cache):
         """Test multiple keys with different expiration times."""
-        await cache.set("short", "value1", expire=0.05)   # 50ms
-        await cache.set("medium", "value2", expire=0.15)  # 150ms
-        await cache.set("long", "value3", expire=1.0)     # 1 second
-        await cache.set("forever", "value4", expire=None)  # No expiration
+        await cache.set("short", "value1", expire=1)     # 1 second
+        await cache.set("long", "value2", expire=60)     # 60 seconds
+        await cache.set("forever", "value3", expire=None)  # No expiration
 
         # All should be accessible initially
         assert await cache.get("short") == "value1"
-        assert await cache.get("medium") == "value2"
-        assert await cache.get("long") == "value3"
-        assert await cache.get("forever") == "value4"
+        assert await cache.get("long") == "value2"
+        assert await cache.get("forever") == "value3"
 
         # Wait for short to expire
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         assert await cache.get("short") is None
-        assert await cache.get("medium") == "value2"
-        assert await cache.get("long") == "value3"
-        assert await cache.get("forever") == "value4"
-
-        # Wait for medium to expire
-        await asyncio.sleep(0.1)
-
-        assert await cache.get("short") is None
-        assert await cache.get("medium") is None
-        assert await cache.get("long") == "value3"
-        assert await cache.get("forever") == "value4"
+        assert await cache.get("long") == "value2"
+        assert await cache.get("forever") == "value3"
 
     @pytest.mark.asyncio
     async def test_overwrite_with_new_expire(self, cache):
         """Test that overwriting a key updates the expiration."""
-        await cache.set("key1", "value1", expire=0.05)  # 50ms
+        await cache.set("key1", "value1", expire=1)  # 1 second
 
         # Overwrite with longer expiration
-        await cache.set("key1", "value2", expire=1.0)  # 1 second
+        await cache.set("key1", "value2", expire=60)  # 60 seconds
 
         # Wait past original expiration
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         # Should still be accessible with new value
         result = await cache.get("key1")
@@ -542,13 +531,13 @@ class TestMemoryDataSrcCacheExpiration:
     @pytest.mark.asyncio
     async def test_overwrite_remove_expire(self, cache):
         """Test that overwriting with no expire removes expiration."""
-        await cache.set("key1", "value1", expire=0.05)  # 50ms
+        await cache.set("key1", "value1", expire=1)  # 1 second
 
         # Overwrite without expiration
         await cache.set("key1", "value2", expire=None)
 
         # Wait past original expiration
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         # Should still be accessible
         result = await cache.get("key1")
@@ -557,28 +546,16 @@ class TestMemoryDataSrcCacheExpiration:
     @pytest.mark.asyncio
     async def test_zero_expire(self, cache):
         """Test with zero expiration (immediately expires)."""
-        await cache.set("key1", "value1", expire=0.0)
+        await cache.set("key1", "value1", expire=0)
 
         # Should be expired immediately
         result = await cache.get("key1")
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_very_small_expire(self, cache):
-        """Test with very small expiration time."""
-        await cache.set("key1", "value1", expire=0.001)  # 1ms
-
-        # Wait a bit
-        await asyncio.sleep(0.01)
-
-        # Should be expired
-        result = await cache.get("key1")
-        assert result is None
-
-    @pytest.mark.asyncio
     async def test_concurrent_access_with_expire(self, cache):
         """Test concurrent access to expiring entries."""
-        await cache.set("key1", "value1", expire=0.1)
+        await cache.set("key1", "value1", expire=60)
 
         async def read_value():
             return await cache.get("key1")
@@ -610,14 +587,14 @@ class TestCachedAsyncPoolExpiration:
         async def fetcher():
             return "fetched_value"
 
-        result = await pool.get_or_fetch("key1", fetcher, expire=0.05)
+        result = await pool.get_or_fetch("key1", fetcher, expire=1)
         assert result == "fetched_value"
 
         # Value should be cached
         assert await cache.get("key1") == "fetched_value"
 
         # Wait for expiration
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         # Value should be expired
         assert await cache.get("key1") is None
@@ -633,20 +610,20 @@ class TestCachedAsyncPoolExpiration:
             return f"value_{fetch_count}"
 
         # First fetch
-        result1 = await pool.get_or_fetch("key1", fetcher, expire=0.05)
+        result1 = await pool.get_or_fetch("key1", fetcher, expire=1)
         assert result1 == "value_1"
         assert fetch_count == 1
 
         # Second fetch should use cache
-        result2 = await pool.get_or_fetch("key1", fetcher, expire=0.05)
+        result2 = await pool.get_or_fetch("key1", fetcher, expire=1)
         assert result2 == "value_1"
         assert fetch_count == 1
 
         # Wait for expiration
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         # Third fetch should re-fetch
-        result3 = await pool.get_or_fetch("key1", fetcher, expire=0.05)
+        result3 = await pool.get_or_fetch("key1", fetcher, expire=1)
         assert result3 == "value_2"
         assert fetch_count == 2
 
@@ -674,11 +651,11 @@ class TestCachedAsyncPoolExpiration:
             return inner
 
         # Set different expiration times
-        await pool.get_or_fetch("short", await fetcher("short_value"), expire=0.05)
-        await pool.get_or_fetch("long", await fetcher("long_value"), expire=1.0)
+        await pool.get_or_fetch("short", await fetcher("short_value"), expire=1)
+        await pool.get_or_fetch("long", await fetcher("long_value"), expire=60)
 
         # Wait for short to expire
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1.1)
 
         # short should re-fetch, long should use cache
         fetch_count_short = 0
@@ -694,8 +671,8 @@ class TestCachedAsyncPoolExpiration:
             fetch_count_long += 1
             return "new_long_value"
 
-        result_short = await pool.get_or_fetch("short", short_fetcher, expire=0.05)
-        result_long = await pool.get_or_fetch("long", long_fetcher, expire=1.0)
+        result_short = await pool.get_or_fetch("short", short_fetcher, expire=1)
+        result_long = await pool.get_or_fetch("long", long_fetcher, expire=60)
 
         assert result_short == "new_short_value"  # Re-fetched
         assert result_long == "long_value"        # From cache
@@ -717,12 +694,12 @@ class TestCachedAsyncPoolExpiration:
             return f"value_{fetch_count}"
 
         # Start multiple concurrent requests for the same key with expiration
-        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=1.0))
+        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
 
         await fetch_started.wait()
 
-        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=1.0))
-        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=1.0))
+        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
+        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
 
         fetch_proceed.set()
 
