@@ -116,7 +116,7 @@ class TestCachedAsyncPool:
             fetch_count += 1
             return "fetched_value"
 
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
 
         assert result == "fetched_value"
         assert fetch_count == 1
@@ -134,7 +134,7 @@ class TestCachedAsyncPool:
             fetch_count += 1
             return "fresh_value"
 
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
 
         assert result == "cached_value"
         assert fetch_count == 0  # Fetcher should not be called
@@ -145,15 +145,15 @@ class TestCachedAsyncPool:
         async def fetcher():
             return "fetched_value"
 
-        await pool.get_or_fetch("key1", fetcher)
+        await pool.get_or_fetch("key1", fetcher, lambda x: x)
 
         # Verify it's in the cache
         cached = await cache.get("key1")
         assert cached == "fetched_value"
 
     @pytest.mark.asyncio
-    async def test_get_or_fetch_none_not_cached(self, cache, pool):
-        """Test get_or_fetch does not cache None results."""
+    async def test_get_or_fetch_fetcher_none_not_cached(self, cache, pool):
+        """Test get_or_fetch does not cache when fetcher returns None."""
         fetch_count = 0
 
         async def fetcher():
@@ -161,7 +161,7 @@ class TestCachedAsyncPool:
             fetch_count += 1
             return None
 
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
         assert result is None
 
         # Verify None is not cached
@@ -169,9 +169,61 @@ class TestCachedAsyncPool:
         assert cached is None
 
         # Next call should fetch again
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
         assert result is None
         assert fetch_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_parser_none_not_cached(self, cache, pool):
+        """Test get_or_fetch does not cache when parser returns None."""
+        fetch_count = 0
+
+        async def fetcher():
+            nonlocal fetch_count
+            fetch_count += 1
+            return "fetched_value"
+
+        # Parser returns None
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: None)
+        assert result is None
+
+        # Verify value is not cached
+        cached = await cache.get("key1")
+        assert cached is None
+
+        # Next call should fetch again
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: None)
+        assert result is None
+        assert fetch_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_parser_transforms_value(self, cache, pool):
+        """Test get_or_fetch returns parser's output."""
+        async def fetcher():
+            return '{"key": "value"}'
+
+        # Parser transforms to dict
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: {"parsed": x})
+
+        assert result == {"parsed": '{"key": "value"}'}
+
+        # Raw value should be in cache
+        cached = await cache.get("key1")
+        assert cached == '{"key": "value"}'
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_cache_hit_uses_parser(self, cache, pool):
+        """Test get_or_fetch applies parser to cached value on cache hit."""
+        # Pre-populate cache
+        await cache.set("key1", "cached_value")
+
+        async def fetcher():
+            return "fresh_value"
+
+        # Parser should be applied to cached value
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x.upper())
+
+        assert result == "CACHED_VALUE"
 
     @pytest.mark.asyncio
     async def test_deduplication_same_key(self, pool):
@@ -187,15 +239,17 @@ class TestCachedAsyncPool:
             await fetch_proceed.wait()
             return f"value_{fetch_count}"
 
+        parser = lambda x: x
+
         # Start multiple concurrent requests for the same key
-        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher))
+        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser))
 
         # Wait for first fetch to start
         await fetch_started.wait()
 
         # Start more requests while first is pending
-        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher))
-        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher))
+        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser))
+        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser))
 
         # Allow fetch to complete
         fetch_proceed.set()
@@ -223,10 +277,12 @@ class TestCachedAsyncPool:
         fetcher2 = await make_fetcher("key2")
         fetcher3 = await make_fetcher("key3")
 
+        parser = lambda x: x
+
         results = await asyncio.gather(
-            pool.get_or_fetch("key1", fetcher1),
-            pool.get_or_fetch("key2", fetcher2),
-            pool.get_or_fetch("key3", fetcher3),
+            pool.get_or_fetch("key1", fetcher1, parser),
+            pool.get_or_fetch("key2", fetcher2, parser),
+            pool.get_or_fetch("key3", fetcher3, parser),
         )
 
         # Each key should trigger its own fetch
@@ -257,9 +313,11 @@ class TestCachedAsyncPool:
 
             return f"value_{key}"
 
+        parser = lambda x: x
+
         # Launch more tasks than semaphore allows
         tasks = [
-            pool.get_or_fetch(f"key{i}", lambda i=i: tracked_fetcher(i))
+            pool.get_or_fetch(f"key{i}", lambda i=i: tracked_fetcher(i), parser)
             for i in range(5)
         ]
 
@@ -274,7 +332,7 @@ class TestCachedAsyncPool:
         async def fetcher():
             return "value"
 
-        await pool.get_or_fetch("key1", fetcher)
+        await pool.get_or_fetch("key1", fetcher, lambda x: x)
 
         # After completion, pending should be empty
         assert "key1" not in pool._pending
@@ -289,7 +347,7 @@ class TestCachedAsyncPool:
             raise ValueError("Fetch failed")
 
         with pytest.raises(ValueError):
-            await pool.get_or_fetch("key1", failing_fetcher)
+            await pool.get_or_fetch("key1", failing_fetcher, lambda x: x)
 
         # After exception, pending should be cleaned up
         assert "key1" not in pool._pending
@@ -304,13 +362,15 @@ class TestCachedAsyncPool:
             fetch_count += 1
             return f"value_{fetch_count}"
 
+        parser = lambda x: x
+
         # First fetch
-        result1 = await pool.get_or_fetch("key1", fetcher)
+        result1 = await pool.get_or_fetch("key1", fetcher, parser)
         assert result1 == "value_1"
         assert fetch_count == 1
 
         # Second fetch should use cache
-        result2 = await pool.get_or_fetch("key1", fetcher)
+        result2 = await pool.get_or_fetch("key1", fetcher, parser)
         assert result2 == "value_1"  # Same cached value
         assert fetch_count == 1  # No additional fetch
 
@@ -328,7 +388,7 @@ class TestCachedAsyncPoolEdgeCases:
             await asyncio.sleep(0.1)
             return "delayed_value"
 
-        result = await pool.get_or_fetch("key1", delayed_fetcher)
+        result = await pool.get_or_fetch("key1", delayed_fetcher, lambda x: x)
         assert result == "delayed_value"
 
     @pytest.mark.asyncio
@@ -340,7 +400,7 @@ class TestCachedAsyncPoolEdgeCases:
         async def fetcher():
             return "value_for_empty_key"
 
-        result = await pool.get_or_fetch("", fetcher)
+        result = await pool.get_or_fetch("", fetcher, lambda x: x)
         assert result == "value_for_empty_key"
 
         # Should be cached
@@ -358,7 +418,7 @@ class TestCachedAsyncPoolEdgeCases:
         async def fetcher():
             return large_string
 
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
         assert result == large_string
 
     @pytest.mark.asyncio
@@ -376,13 +436,15 @@ class TestCachedAsyncPoolEdgeCases:
             await asyncio.sleep(0.02)
             return f"value_{key}"
 
+        parser = lambda x: x
+
         # Mix of same and different keys
         tasks = [
-            pool.get_or_fetch("key1", lambda: tracked_fetcher("key1")),
-            pool.get_or_fetch("key2", lambda: tracked_fetcher("key2")),
-            pool.get_or_fetch("key1", lambda: tracked_fetcher("key1")),  # Duplicate
-            pool.get_or_fetch("key3", lambda: tracked_fetcher("key3")),
-            pool.get_or_fetch("key2", lambda: tracked_fetcher("key2")),  # Duplicate
+            pool.get_or_fetch("key1", lambda: tracked_fetcher("key1"), parser),
+            pool.get_or_fetch("key2", lambda: tracked_fetcher("key2"), parser),
+            pool.get_or_fetch("key1", lambda: tracked_fetcher("key1"), parser),  # Duplicate
+            pool.get_or_fetch("key3", lambda: tracked_fetcher("key3"), parser),
+            pool.get_or_fetch("key2", lambda: tracked_fetcher("key2"), parser),  # Duplicate
         ]
 
         results = await asyncio.gather(*tasks)
@@ -403,15 +465,17 @@ class TestCachedAsyncPoolEdgeCases:
                 return value
             return fetcher
 
+        parser = lambda x: x
+
         # First batch of operations
         for i in range(5):
             fetcher = await make_fetcher(f"v{i}")
-            await pool.get_or_fetch(f"batch1_key{i}", fetcher)
+            await pool.get_or_fetch(f"batch1_key{i}", fetcher, parser)
 
         # Second batch of operations
         for i in range(5):
             fetcher = await make_fetcher(f"v{i}")
-            result = await pool.get_or_fetch(f"batch2_key{i}", fetcher)
+            result = await pool.get_or_fetch(f"batch2_key{i}", fetcher, parser)
             assert result == f"v{i}"
 
 
@@ -587,7 +651,7 @@ class TestCachedAsyncPoolExpiration:
         async def fetcher():
             return "fetched_value"
 
-        result = await pool.get_or_fetch("key1", fetcher, expire=1)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x, expire=1)
         assert result == "fetched_value"
 
         # Value should be cached
@@ -609,13 +673,15 @@ class TestCachedAsyncPoolExpiration:
             fetch_count += 1
             return f"value_{fetch_count}"
 
+        parser = lambda x: x
+
         # First fetch
-        result1 = await pool.get_or_fetch("key1", fetcher, expire=1)
+        result1 = await pool.get_or_fetch("key1", fetcher, parser, expire=1)
         assert result1 == "value_1"
         assert fetch_count == 1
 
         # Second fetch should use cache
-        result2 = await pool.get_or_fetch("key1", fetcher, expire=1)
+        result2 = await pool.get_or_fetch("key1", fetcher, parser, expire=1)
         assert result2 == "value_1"
         assert fetch_count == 1
 
@@ -623,7 +689,7 @@ class TestCachedAsyncPoolExpiration:
         await asyncio.sleep(1.1)
 
         # Third fetch should re-fetch
-        result3 = await pool.get_or_fetch("key1", fetcher, expire=1)
+        result3 = await pool.get_or_fetch("key1", fetcher, parser, expire=1)
         assert result3 == "value_2"
         assert fetch_count == 2
 
@@ -633,7 +699,7 @@ class TestCachedAsyncPoolExpiration:
         async def fetcher():
             return "fetched_value"
 
-        result = await pool.get_or_fetch("key1", fetcher)
+        result = await pool.get_or_fetch("key1", fetcher, lambda x: x)
         assert result == "fetched_value"
 
         # Wait a bit
@@ -650,9 +716,11 @@ class TestCachedAsyncPoolExpiration:
                 return value
             return inner
 
+        parser = lambda x: x
+
         # Set different expiration times
-        await pool.get_or_fetch("short", await fetcher("short_value"), expire=1)
-        await pool.get_or_fetch("long", await fetcher("long_value"), expire=60)
+        await pool.get_or_fetch("short", await fetcher("short_value"), parser, expire=1)
+        await pool.get_or_fetch("long", await fetcher("long_value"), parser, expire=60)
 
         # Wait for short to expire
         await asyncio.sleep(1.1)
@@ -671,8 +739,8 @@ class TestCachedAsyncPoolExpiration:
             fetch_count_long += 1
             return "new_long_value"
 
-        result_short = await pool.get_or_fetch("short", short_fetcher, expire=1)
-        result_long = await pool.get_or_fetch("long", long_fetcher, expire=60)
+        result_short = await pool.get_or_fetch("short", short_fetcher, parser, expire=1)
+        result_long = await pool.get_or_fetch("long", long_fetcher, parser, expire=60)
 
         assert result_short == "new_short_value"  # Re-fetched
         assert result_long == "long_value"        # From cache
@@ -693,13 +761,15 @@ class TestCachedAsyncPoolExpiration:
             await fetch_proceed.wait()
             return f"value_{fetch_count}"
 
+        parser = lambda x: x
+
         # Start multiple concurrent requests for the same key with expiration
-        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
+        task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser, expire=60))
 
         await fetch_started.wait()
 
-        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
-        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, expire=60))
+        task2 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser, expire=60))
+        task3 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser, expire=60))
 
         fetch_proceed.set()
 

@@ -430,8 +430,10 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return "fetched_value"
 
-        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher)
-        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher)
+        parser = lambda x: x
+
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
 
         assert mem_result == "fetched_value"
         assert redis_result == "fetched_value"
@@ -460,8 +462,10 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return "fresh_value"
 
-        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher)
-        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher)
+        parser = lambda x: x
+
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
 
         assert mem_result == "cached_value"
         assert redis_result == "cached_value"
@@ -476,8 +480,10 @@ class TestCachedAsyncPoolWithRedis:
         async def fetcher():
             return "fetched_value"
 
-        await memory_pool.get_or_fetch("key1", fetcher, expire=1)
-        await redis_pool.get_or_fetch("key1", fetcher, expire=1)
+        parser = lambda x: x
+
+        await memory_pool.get_or_fetch("key1", fetcher, parser, expire=1)
+        await redis_pool.get_or_fetch("key1", fetcher, parser, expire=1)
 
         # Values should be cached
         assert await memory_cache.get("key1") == "fetched_value"
@@ -491,10 +497,10 @@ class TestCachedAsyncPoolWithRedis:
         assert await redis_cache.get("key1") is None
 
     @pytest.mark.asyncio
-    async def test_get_or_fetch_none_not_cached(
+    async def test_get_or_fetch_fetcher_none_not_cached(
         self, memory_cache, redis_cache, memory_pool, redis_pool
     ):
-        """Both pools should not cache None results."""
+        """Both pools should not cache when fetcher returns None."""
         mem_fetch_count = 0
         redis_fetch_count = 0
 
@@ -508,9 +514,11 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return None
 
+        parser = lambda x: x
+
         # First fetch
-        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher)
-        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher)
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
 
         assert mem_result is None
         assert redis_result is None
@@ -518,13 +526,94 @@ class TestCachedAsyncPoolWithRedis:
         assert redis_fetch_count == 1
 
         # Second fetch should call fetcher again
-        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher)
-        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher)
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
 
         assert mem_result is None
         assert redis_result is None
         assert mem_fetch_count == 2
         assert redis_fetch_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_parser_none_not_cached(
+        self, memory_cache, redis_cache, memory_pool, redis_pool
+    ):
+        """Both pools should not cache when parser returns None."""
+        mem_fetch_count = 0
+        redis_fetch_count = 0
+
+        async def mem_fetcher():
+            nonlocal mem_fetch_count
+            mem_fetch_count += 1
+            return "fetched_value"
+
+        async def redis_fetcher():
+            nonlocal redis_fetch_count
+            redis_fetch_count += 1
+            return "fetched_value"
+
+        # Parser returns None
+        parser = lambda x: None
+
+        # First fetch
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
+
+        assert mem_result is None
+        assert redis_result is None
+        assert mem_fetch_count == 1
+        assert redis_fetch_count == 1
+
+        # Verify value is not cached
+        assert await memory_cache.get("key1") is None
+        assert await redis_cache.get("key1") is None
+
+        # Second fetch should call fetcher again
+        mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
+
+        assert mem_result is None
+        assert redis_result is None
+        assert mem_fetch_count == 2
+        assert redis_fetch_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_parser_transforms_value(
+        self, memory_pool, redis_pool
+    ):
+        """Both pools should return parser's output."""
+        async def fetcher():
+            return '{"key": "value"}'
+
+        # Parser transforms to dict
+        parser = lambda x: {"parsed": x}
+
+        mem_result = await memory_pool.get_or_fetch("key1", fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key2", fetcher, parser)
+
+        assert mem_result == {"parsed": '{"key": "value"}'}
+        assert redis_result == {"parsed": '{"key": "value"}'}
+
+    @pytest.mark.asyncio
+    async def test_get_or_fetch_cache_hit_uses_parser(
+        self, memory_cache, redis_cache, memory_pool, redis_pool
+    ):
+        """Both pools should apply parser to cached value on cache hit."""
+        # Pre-populate caches
+        await memory_cache.set("key1", "cached_value")
+        await redis_cache.set("key1", "cached_value")
+
+        async def fetcher():
+            return "fresh_value"
+
+        # Parser should be applied to cached value
+        parser = lambda x: x.upper()
+
+        mem_result = await memory_pool.get_or_fetch("key1", fetcher, parser)
+        redis_result = await redis_pool.get_or_fetch("key1", fetcher, parser)
+
+        assert mem_result == "CACHED_VALUE"
+        assert redis_result == "CACHED_VALUE"
 
 
 # =============================================================================

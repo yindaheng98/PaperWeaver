@@ -7,7 +7,7 @@ deduplicates requests for the same cache key.
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable
+from typing import Any, Callable, Awaitable
 import asyncio
 
 
@@ -72,15 +72,17 @@ class CachedAsyncPool:
         self,
         key: str,
         fetcher: Callable[[], Awaitable[str | None]],
+        parser: Callable[[str], Any | None],
         expire: int | None = None
-    ) -> str | None:
+    ) -> Any | None:
         """
         Get value from cache or fetch using the provided callable.
 
         First checks cache for the key. If not found, runs the fetcher
         in the pool with concurrency control. If fetcher returns a non-None
-        value, it's cached before returning. If fetcher returns None,
-        returns None without caching.
+        value, it's passed to the parser. Only when both fetcher and parser
+        return non-None values, the raw fetched value is cached and parser's
+        output is returned. If either returns None, returns None without caching.
 
         Deduplication: If multiple callers request the same key before
         the first fetch completes, they all wait for the same result.
@@ -88,28 +90,29 @@ class CachedAsyncPool:
         Args:
             key: Cache key
             fetcher: Async callable (lambda) that fetches the string data if not cached
+            parser: Callable that parses fetched string data, returns Any or None
             expire: Time-to-live in seconds (integer) for cached value. None means no expiration.
 
         Returns:
-            Cached or fetched string value, or None if fetch returns None
+            Parsed value from cache or fetcher, or None if fetch/parse returns None
         """
         # Check cache first (fast path, no lock)
         cached = await self._cache.get(key)
         if cached is not None:
-            return cached
+            return parser(cached)
 
         async with self._lock:
             # Double check cache after acquiring lock
             cached = await self._cache.get(key)
             if cached is not None:
-                return cached
+                return parser(cached)
 
             # Check if already pending (deduplication)
             if key in self._pending:
                 task = self._pending[key]
             else:
                 # Create task for this key
-                task = asyncio.create_task(self._fetch_and_cache(key, fetcher, expire))
+                task = asyncio.create_task(self._fetch_and_cache(key, fetcher, parser, expire))
                 self._pending[key] = task
 
         # Wait for result outside the lock
@@ -119,25 +122,30 @@ class CachedAsyncPool:
         self,
         key: str,
         fetcher: Callable[[], Awaitable[str | None]],
+        parser: Callable[[str], Any | None],
         expire: int | None = None
-    ) -> str | None:
+    ) -> Any | None:
         """
-        Fetch data using the fetcher and cache if not None.
+        Fetch data using the fetcher, parse it, and cache if both are not None.
 
         Args:
             key: Cache key
             fetcher: Async callable that fetches the string data
+            parser: Callable that parses fetched string data, returns Any or None
             expire: Time-to-live in seconds (integer) for cached value. None means no expiration.
 
         Returns:
-            Fetched string value or None
+            Parsed value or None
         """
         try:
             async with self._semaphore:
                 result = await fetcher()
                 if result is not None:
-                    await self._cache.set(key, result, expire)
-                return result
+                    parsed = parser(result)
+                    if parsed is not None:
+                        await self._cache.set(key, result, expire)
+                        return parsed
+                return None
         finally:
             # Clean up pending entry after task completes
             async with self._lock:
