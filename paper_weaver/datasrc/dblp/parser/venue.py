@@ -88,8 +88,6 @@ class VenuePageParser:
         for h in self.data.findall(".//h3"):
             return h.text
 
-    # TODO: more information in ".//dblpcites/r/proceedings" elements
-
     @property
     def _proceedings_element(self) -> ElementTree.Element | None:
         """Get the proceedings element."""

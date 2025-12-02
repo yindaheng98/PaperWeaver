@@ -65,24 +65,24 @@ class PersonPageParser:
         """Iterate over affiliations."""
         person = self._person_element
         if person is not None:
-            for note in person:
-                if note.tag == "note" and note.attrib.get("type") == "affiliation" and note.text:
+            for note in person.findall("note"):
+                if note.attrib.get("type") == "affiliation" and note.text:
                     yield note.text
 
     @property
     def uname(self) -> str | None:
         person = self._person_element
         if person is not None:
-            for note in person:
-                if note.tag == "note" and note.attrib.get("type") == "uname" and note.text:
+            for note in person.findall("note"):
+                if note.attrib.get("type") == "uname" and note.text:
                     return note.text
 
     @property
     def urls(self) -> Iterator[str]:
         person = self._person_element
         if person is not None:
-            for note in person:
-                if note.tag == "url" and note.text:
+            for note in person.findall("url"):
+                if note.text:
                     yield note.text
 
     @property
@@ -108,20 +108,18 @@ class PersonPageParser:
 
         if self.pid:
             result["pid"] = self.pid
+
         if self.name:
             result["name"] = self.name
 
-        affiliations = list(self.affiliations)
-        if affiliations:
-            result["affiliations"] = affiliations
+        if list(self.affiliations):
+            result["affiliations"] = list(self.affiliations)
 
-        uname = self.uname
-        if uname:
-            result["uname"] = uname
+        if self.uname:
+            result["uname"] = self.uname
 
-        urls = list(self.urls)
-        if urls:
-            result["urls"] = urls
+        if list(self.urls):
+            result["urls"] = list(self.urls)
 
         return result
 
