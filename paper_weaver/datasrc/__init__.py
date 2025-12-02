@@ -1,4 +1,5 @@
-from .cache import DataSrcCacheIface, MemoryDataSrcCache, CachedAsyncPool
+from .cache import DataSrcCacheIface, CachedAsyncPool
+from .cache_impl import MemoryDataSrcCache
 
 __all__ = [
     "DataSrcCacheIface",
