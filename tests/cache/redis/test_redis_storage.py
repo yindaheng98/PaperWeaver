@@ -95,7 +95,7 @@ def memory_identifier_registry():
 
 @pytest.fixture
 def redis_identifier_registry(redis_client):
-    return RedisIdentifierRegistry(redis_client, "test_idreg")
+    return RedisIdentifierRegistry(redis_client, "test_idreg", expire=111)
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def memory_info_storage():
 
 @pytest.fixture
 def redis_info_storage(redis_client):
-    return RedisInfoStorage(redis_client, "test_info")
+    return RedisInfoStorage(redis_client, "test_info", expire=112)
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ def memory_link_storage():
 
 @pytest.fixture
 def redis_link_storage(redis_client):
-    return RedisCommittedLinkStorage(redis_client, "test_link")
+    return RedisCommittedLinkStorage(redis_client, "test_links", expire=113)
 
 
 @pytest.fixture
@@ -125,7 +125,7 @@ def memory_pending_storage():
 
 @pytest.fixture
 def redis_pending_storage(redis_client):
-    return RedisPendingListStorage(redis_client, "test_pending")
+    return RedisPendingListStorage(redis_client, "test_pending", expire=114)
 
 
 # =============================================================================

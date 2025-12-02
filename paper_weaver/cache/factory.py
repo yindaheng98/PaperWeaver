@@ -30,22 +30,25 @@ def create_memory_author_weaver_cache() -> FullAuthorWeaverCache:
     )
 
 
-def create_redis_author_weaver_cache(redis_client, prefix: str = "pw") -> FullAuthorWeaverCache:
+def create_redis_author_weaver_cache(
+    redis_client, prefix: str = "pw", expire: int | None = None
+) -> FullAuthorWeaverCache:
     """
     Create a Redis-backed cache for AuthorWeaver.
 
     Args:
         redis_client: An async Redis client (e.g., from redis.asyncio)
         prefix: Prefix for all Redis keys
+        expire: TTL in seconds for keys, None means no expiration
     """
     return FullAuthorWeaverCache(
-        paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg"),
-        paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info"),
-        author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg"),
-        author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info"),
-        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap"),
-        pending_papers=RedisPendingListStorage(redis_client, f"{prefix}:pending_a2p"),
-        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a"),
+        paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg", expire),
+        paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info", expire),
+        author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg", expire),
+        author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info", expire),
+        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap", expire),
+        pending_papers=RedisPendingListStorage(redis_client, f"{prefix}:pending_a2p", expire),
+        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a", expire),
     )
 
 
@@ -64,24 +67,27 @@ def create_memory_paper_weaver_cache() -> FullPaperWeaverCache:
     )
 
 
-def create_redis_paper_weaver_cache(redis_client, prefix: str = "pw") -> FullPaperWeaverCache:
+def create_redis_paper_weaver_cache(
+    redis_client, prefix: str = "pw", expire: int | None = None
+) -> FullPaperWeaverCache:
     """
     Create a Redis-backed cache for full paper operations.
 
     Args:
         redis_client: An async Redis client (e.g., from redis.asyncio)
         prefix: Prefix for all Redis keys
+        expire: TTL in seconds for keys, None means no expiration
     """
     return FullPaperWeaverCache(
-        paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg"),
-        paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info"),
-        author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg"),
-        author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info"),
-        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap"),
-        committed_reference_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_pr"),
-        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a"),
-        pending_references=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2r"),
-        pending_citations=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2c"),
+        paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg", expire),
+        paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info", expire),
+        author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg", expire),
+        author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info", expire),
+        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap", expire),
+        committed_reference_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_pr", expire),
+        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a", expire),
+        pending_references=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2r", expire),
+        pending_citations=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2c", expire),
     )
 
 
@@ -94,7 +100,7 @@ class HybridCacheBuilder:
     Allows fine-grained control over which components use which backend.
 
     Example:
-        builder = HybridCacheBuilder(redis_client)
+        builder = HybridCacheBuilder(redis_client, expire=3600)
         cache = (builder
             .with_memory_paper_registry()
             .with_redis_paper_info("paper_info")
@@ -104,8 +110,16 @@ class HybridCacheBuilder:
             .build_author_weaver_cache())
     """
 
-    def __init__(self, redis_client=None):
+    def __init__(self, redis_client=None, expire: int | None = None):
+        """
+        Initialize hybrid cache builder.
+
+        Args:
+            redis_client: Redis async client for Redis-backed components
+            expire: Default TTL in seconds for Redis keys, None means no expiration
+        """
         self._redis = redis_client
+        self._expire = expire
         self._paper_registry = None
         self._paper_info = None
         self._author_registry = None
@@ -123,8 +137,8 @@ class HybridCacheBuilder:
         self._paper_registry = MemoryIdentifierRegistry()
         return self
 
-    def with_redis_paper_registry(self, prefix: str = "paper_reg") -> "HybridCacheBuilder":
-        self._paper_registry = RedisIdentifierRegistry(self._redis, prefix)
+    def with_redis_paper_registry(self, prefix: str = "paper_reg", expire: int | None = None) -> "HybridCacheBuilder":
+        self._paper_registry = RedisIdentifierRegistry(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Paper info
@@ -133,8 +147,8 @@ class HybridCacheBuilder:
         self._paper_info = MemoryInfoStorage()
         return self
 
-    def with_redis_paper_info(self, prefix: str = "paper_info") -> "HybridCacheBuilder":
-        self._paper_info = RedisInfoStorage(self._redis, prefix)
+    def with_redis_paper_info(self, prefix: str = "paper_info", expire: int | None = None) -> "HybridCacheBuilder":
+        self._paper_info = RedisInfoStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Author registry
@@ -143,8 +157,8 @@ class HybridCacheBuilder:
         self._author_registry = MemoryIdentifierRegistry()
         return self
 
-    def with_redis_author_registry(self, prefix: str = "author_reg") -> "HybridCacheBuilder":
-        self._author_registry = RedisIdentifierRegistry(self._redis, prefix)
+    def with_redis_author_registry(self, prefix: str = "author_reg", expire: int | None = None) -> "HybridCacheBuilder":
+        self._author_registry = RedisIdentifierRegistry(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Author info
@@ -153,8 +167,8 @@ class HybridCacheBuilder:
         self._author_info = MemoryInfoStorage()
         return self
 
-    def with_redis_author_info(self, prefix: str = "author_info") -> "HybridCacheBuilder":
-        self._author_info = RedisInfoStorage(self._redis, prefix)
+    def with_redis_author_info(self, prefix: str = "author_info", expire: int | None = None) -> "HybridCacheBuilder":
+        self._author_info = RedisInfoStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Committed links
@@ -163,16 +177,16 @@ class HybridCacheBuilder:
         self._committed_author_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_committed_author_links(self, prefix: str = "committed_ap") -> "HybridCacheBuilder":
-        self._committed_author_links = RedisCommittedLinkStorage(self._redis, prefix)
+    def with_redis_committed_author_links(self, prefix: str = "committed_ap", expire: int | None = None) -> "HybridCacheBuilder":
+        self._committed_author_links = RedisCommittedLinkStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_committed_reference_links(self) -> "HybridCacheBuilder":
         self._committed_reference_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_committed_reference_links(self, prefix: str = "committed_pr") -> "HybridCacheBuilder":
-        self._committed_reference_links = RedisCommittedLinkStorage(self._redis, prefix)
+    def with_redis_committed_reference_links(self, prefix: str = "committed_pr", expire: int | None = None) -> "HybridCacheBuilder":
+        self._committed_reference_links = RedisCommittedLinkStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Pending lists
@@ -181,32 +195,32 @@ class HybridCacheBuilder:
         self._pending_papers = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_papers(self, prefix: str = "pending_a2p") -> "HybridCacheBuilder":
-        self._pending_papers = RedisPendingListStorage(self._redis, prefix)
+    def with_redis_pending_papers(self, prefix: str = "pending_a2p", expire: int | None = None) -> "HybridCacheBuilder":
+        self._pending_papers = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_authors(self) -> "HybridCacheBuilder":
         self._pending_authors = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_authors(self, prefix: str = "pending_p2a") -> "HybridCacheBuilder":
-        self._pending_authors = RedisPendingListStorage(self._redis, prefix)
+    def with_redis_pending_authors(self, prefix: str = "pending_p2a", expire: int | None = None) -> "HybridCacheBuilder":
+        self._pending_authors = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_references(self) -> "HybridCacheBuilder":
         self._pending_references = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_references(self, prefix: str = "pending_p2r") -> "HybridCacheBuilder":
-        self._pending_references = RedisPendingListStorage(self._redis, prefix)
+    def with_redis_pending_references(self, prefix: str = "pending_p2r", expire: int | None = None) -> "HybridCacheBuilder":
+        self._pending_references = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_citations(self) -> "HybridCacheBuilder":
         self._pending_citations = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_citations(self, prefix: str = "pending_p2c") -> "HybridCacheBuilder":
-        self._pending_citations = RedisPendingListStorage(self._redis, prefix)
+    def with_redis_pending_citations(self, prefix: str = "pending_p2c", expire: int | None = None) -> "HybridCacheBuilder":
+        self._pending_citations = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
         return self
 
     # Convenience methods for setting all components at once
@@ -225,19 +239,20 @@ class HybridCacheBuilder:
                 .with_memory_pending_references()
                 .with_memory_pending_citations())
 
-    def with_all_redis(self, prefix: str = "pw") -> "HybridCacheBuilder":
+    def with_all_redis(self, prefix: str = "pw", expire: int | None = None) -> "HybridCacheBuilder":
         """Set all components to use Redis backend with given prefix."""
+        exp = expire if expire is not None else self._expire
         return (self
-                .with_redis_paper_registry(f"{prefix}:paper_reg")
-                .with_redis_paper_info(f"{prefix}:paper_info")
-                .with_redis_author_registry(f"{prefix}:author_reg")
-                .with_redis_author_info(f"{prefix}:author_info")
-                .with_redis_committed_author_links(f"{prefix}:committed_ap")
-                .with_redis_committed_reference_links(f"{prefix}:committed_pr")
-                .with_redis_pending_papers(f"{prefix}:pending_a2p")
-                .with_redis_pending_authors(f"{prefix}:pending_p2a")
-                .with_redis_pending_references(f"{prefix}:pending_p2r")
-                .with_redis_pending_citations(f"{prefix}:pending_p2c"))
+                .with_redis_paper_registry(f"{prefix}:paper_reg", exp)
+                .with_redis_paper_info(f"{prefix}:paper_info", exp)
+                .with_redis_author_registry(f"{prefix}:author_reg", exp)
+                .with_redis_author_info(f"{prefix}:author_info", exp)
+                .with_redis_committed_author_links(f"{prefix}:committed_ap", exp)
+                .with_redis_committed_reference_links(f"{prefix}:committed_pr", exp)
+                .with_redis_pending_papers(f"{prefix}:pending_a2p", exp)
+                .with_redis_pending_authors(f"{prefix}:pending_p2a", exp)
+                .with_redis_pending_references(f"{prefix}:pending_p2r", exp)
+                .with_redis_pending_citations(f"{prefix}:pending_p2c", exp))
 
     # Build methods
 

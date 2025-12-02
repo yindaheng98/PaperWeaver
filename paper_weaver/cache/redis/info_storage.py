@@ -14,9 +14,18 @@ from ..info_storage import InfoStorageIface
 class RedisInfoStorage(InfoStorageIface):
     """Redis info storage."""
 
-    def __init__(self, redis_client: Redis, prefix: str = "info"):
+    def __init__(self, redis_client: Redis, prefix: str = "info", expire: int | None = None):
+        """
+        Initialize Redis info storage.
+
+        Args:
+            redis_client: Redis async client
+            prefix: Key prefix for Redis keys
+            expire: TTL in seconds for keys, None means no expiration
+        """
         self._redis = redis_client
         self._prefix = prefix
+        self._expire = expire
 
     def _key(self, canonical_id: str) -> str:
         return f"{self._prefix}:{canonical_id}"
@@ -29,4 +38,7 @@ class RedisInfoStorage(InfoStorageIface):
         return json.loads(data)
 
     async def set_info(self, canonical_id: str, info: dict) -> None:
-        await self._redis.set(self._key(canonical_id), json.dumps(info))
+        if self._expire is not None:
+            await self._redis.set(self._key(canonical_id), json.dumps(info), ex=self._expire)
+        else:
+            await self._redis.set(self._key(canonical_id), json.dumps(info))

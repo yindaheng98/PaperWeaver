@@ -16,9 +16,18 @@ from ..identifier import IdentifierRegistryIface
 class RedisIdentifierRegistry(IdentifierRegistryIface):
     """Redis implementation of identifier registry."""
 
-    def __init__(self, redis_client: Redis, prefix: str = "idreg"):
+    def __init__(self, redis_client: Redis, prefix: str = "idreg", expire: int | None = None):
+        """
+        Initialize Redis identifier registry.
+
+        Args:
+            redis_client: Redis async client
+            prefix: Key prefix for Redis keys
+            expire: TTL in seconds for keys, None means no expiration
+        """
         self._redis = redis_client
         self._prefix = prefix
+        self._expire = expire
         self._lock = asyncio.Lock()
 
     def _ident_key(self, identifier: str) -> str:
@@ -58,9 +67,16 @@ class RedisIdentifierRegistry(IdentifierRegistryIface):
                 # Store all identifiers
                 pipe = self._redis.pipeline()
                 for ident in identifiers:
-                    pipe.set(self._ident_key(ident), canonical_id)
+                    if self._expire is not None:
+                        pipe.set(self._ident_key(ident), canonical_id, ex=self._expire)
+                    else:
+                        pipe.set(self._ident_key(ident), canonical_id)
                 pipe.sadd(self._canonical_key(canonical_id), *identifiers)
+                if self._expire is not None:
+                    pipe.expire(self._canonical_key(canonical_id), self._expire)
                 pipe.sadd(self._all_canonicals_key(), canonical_id)
+                if self._expire is not None:
+                    pipe.expire(self._all_canonicals_key(), self._expire)
                 await pipe.execute()
                 return canonical_id
 
@@ -78,14 +94,22 @@ class RedisIdentifierRegistry(IdentifierRegistryIface):
             # Update mappings
             pipe = self._redis.pipeline()
             for ident in all_identifiers:
-                pipe.set(self._ident_key(ident), primary_canonical)
+                if self._expire is not None:
+                    pipe.set(self._ident_key(ident), primary_canonical, ex=self._expire)
+                else:
+                    pipe.set(self._ident_key(ident), primary_canonical)
             pipe.delete(self._canonical_key(primary_canonical))
             pipe.sadd(self._canonical_key(primary_canonical), *all_identifiers)
+            if self._expire is not None:
+                pipe.expire(self._canonical_key(primary_canonical), self._expire)
 
             # Remove merged canonical IDs
             for cid in canonical_ids_list[1:]:
                 pipe.delete(self._canonical_key(cid))
                 pipe.srem(self._all_canonicals_key(), cid)
+
+            if self._expire is not None:
+                pipe.expire(self._all_canonicals_key(), self._expire)
 
             await pipe.execute()
             return primary_canonical
