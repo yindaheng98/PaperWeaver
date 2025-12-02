@@ -43,10 +43,10 @@ class TestAuthor2PapersCache:
             Paper(identifiers={"doi:1"}),
             Paper(identifiers={"doi:2"}),
         ]
-        
+
         await cache.add_pending_papers_for_author(author, papers)
         result = await cache.get_pending_papers_for_author(author)
-        
+
         assert len(result) == 2
         assert any("doi:1" in p.identifiers for p in result)
         assert any("doi:2" in p.identifiers for p in result)
@@ -56,14 +56,13 @@ class TestAuthor2PapersCache:
         """Test that pending papers are registered in the registry."""
         author = Author(identifiers={"orcid:0001"})
         papers = [Paper(identifiers={"doi:1"})]
-        
+
         await cache.add_pending_papers_for_author(author, papers)
-        
+
         # Paper should be discoverable via iteration
         found_papers = []
         async for paper in cache.iterate_papers():
             found_papers.append(paper)
-        
+
         assert len(found_papers) == 1
         assert "doi:1" in found_papers[0].identifiers
-

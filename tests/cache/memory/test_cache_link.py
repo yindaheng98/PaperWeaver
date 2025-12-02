@@ -34,7 +34,7 @@ class TestAuthorLinkCache:
         """Test checking uncommitted author link."""
         paper = Paper(identifiers={"doi:123"})
         author = Author(identifiers={"orcid:0001"})
-        
+
         result = await cache.is_author_link_committed(paper, author)
         assert result is False
 
@@ -43,10 +43,10 @@ class TestAuthorLinkCache:
         """Test committing and checking author link."""
         paper = Paper(identifiers={"doi:123"})
         author = Author(identifiers={"orcid:0001"})
-        
+
         await cache.commit_author_link(paper, author)
         result = await cache.is_author_link_committed(paper, author)
-        
+
         assert result is True
 
     @pytest.mark.asyncio
@@ -54,13 +54,13 @@ class TestAuthorLinkCache:
         """Test that link checking works with merged identifiers."""
         paper = Paper(identifiers={"doi:123"})
         author = Author(identifiers={"orcid:0001"})
-        
+
         await cache.commit_author_link(paper, author)
-        
+
         # Check with additional identifiers
         paper2 = Paper(identifiers={"doi:123", "arxiv:456"})
         author2 = Author(identifiers={"orcid:0001", "scopus:0001"})
-        
+
         result = await cache.is_author_link_committed(paper2, author2)
         assert result is True
 
@@ -83,7 +83,7 @@ class TestPaperLinkCache:
         """Test checking uncommitted reference link."""
         paper = Paper(identifiers={"doi:123"})
         reference = Paper(identifiers={"doi:456"})
-        
+
         result = await cache.is_reference_link_committed(paper, reference)
         assert result is False
 
@@ -92,10 +92,10 @@ class TestPaperLinkCache:
         """Test committing and checking reference link."""
         paper = Paper(identifiers={"doi:123"})
         reference = Paper(identifiers={"doi:456"})
-        
+
         await cache.commit_reference_link(paper, reference)
         result = await cache.is_reference_link_committed(paper, reference)
-        
+
         assert result is True
 
     @pytest.mark.asyncio
@@ -103,12 +103,11 @@ class TestPaperLinkCache:
         """Test that citation link is inverse of reference link."""
         paper = Paper(identifiers={"doi:123"})
         citation = Paper(identifiers={"doi:456"})
-        
+
         # "paper is cited by citation" means "citation references paper"
         await cache.commit_citation_link(paper, citation)
-        
+
         # Check: paper is cited by citation
         assert await cache.is_citation_link_committed(paper, citation) is True
         # Internally: citation references paper
         assert await cache.is_reference_link_committed(citation, paper) is True
-

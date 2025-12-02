@@ -36,10 +36,10 @@ class TestComposableCacheBase:
         """Test setting and getting paper info."""
         paper = Paper(identifiers={"doi:123"})
         info = {"title": "Test Paper", "year": 2024}
-        
+
         await cache.set_paper_info(paper, info)
         paper, retrieved_info = await cache.get_paper_info(paper)
-        
+
         assert retrieved_info == info
 
     @pytest.mark.asyncio
@@ -47,11 +47,11 @@ class TestComposableCacheBase:
         """Test that paper identifiers are merged when setting info."""
         paper = Paper(identifiers={"doi:123", "arxiv:456"})
         await cache.set_paper_info(paper, {"title": "Test"})
-        
+
         # Query with partial identifiers
         paper2 = Paper(identifiers={"doi:123"})
         paper2, info = await cache.get_paper_info(paper2)
-        
+
         # Should have all identifiers
         assert "doi:123" in paper2.identifiers
         assert "arxiv:456" in paper2.identifiers
@@ -68,10 +68,10 @@ class TestComposableCacheBase:
         """Test setting and getting author info."""
         author = Author(identifiers={"orcid:0000-0001"})
         info = {"name": "John Doe"}
-        
+
         await cache.set_author_info(author, info)
         author, retrieved_info = await cache.get_author_info(author)
-        
+
         assert retrieved_info == info
 
     @pytest.mark.asyncio
@@ -79,14 +79,14 @@ class TestComposableCacheBase:
         """Test iterating over registered papers."""
         paper1 = Paper(identifiers={"doi:1"})
         paper2 = Paper(identifiers={"doi:2"})
-        
+
         await cache.set_paper_info(paper1, {"title": "Paper 1"})
         await cache.set_paper_info(paper2, {"title": "Paper 2"})
-        
+
         papers = []
         async for paper in cache.iterate_papers():
             papers.append(paper)
-        
+
         assert len(papers) == 2
 
     @pytest.mark.asyncio
@@ -94,13 +94,12 @@ class TestComposableCacheBase:
         """Test iterating over registered authors."""
         author1 = Author(identifiers={"orcid:1"})
         author2 = Author(identifiers={"orcid:2"})
-        
+
         await cache.set_author_info(author1, {"name": "Author 1"})
         await cache.set_author_info(author2, {"name": "Author 2"})
-        
+
         authors = []
         async for author in cache.iterate_authors():
             authors.append(author)
-        
-        assert len(authors) == 2
 
+        assert len(authors) == 2

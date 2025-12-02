@@ -20,7 +20,7 @@ class TestHybridCacheBuilder:
         """Test building author weaver cache with defaults."""
         builder = HybridCacheBuilder()
         cache = builder.build_author_weaver_cache()
-        
+
         # Verify it works
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
@@ -32,7 +32,7 @@ class TestHybridCacheBuilder:
         """Test building paper weaver cache with defaults."""
         builder = HybridCacheBuilder()
         cache = builder.build_paper_weaver_cache()
-        
+
         # Verify it works
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
@@ -44,7 +44,7 @@ class TestHybridCacheBuilder:
         """Test with_all_memory convenience method."""
         builder = HybridCacheBuilder().with_all_memory()
         cache = builder.build_author_weaver_cache()
-        
+
         # Verify it works
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
@@ -56,7 +56,7 @@ class TestHybridCacheBuilder:
         """Test building Author2PapersCache."""
         builder = HybridCacheBuilder().with_all_memory()
         cache = builder.build_author2papers_cache()
-        
+
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
         paper, info = await cache.get_paper_info(paper)
@@ -67,7 +67,7 @@ class TestHybridCacheBuilder:
         """Test building Paper2AuthorsCache."""
         builder = HybridCacheBuilder().with_all_memory()
         cache = builder.build_paper2authors_cache()
-        
+
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
         paper, info = await cache.get_paper_info(paper)
@@ -78,7 +78,7 @@ class TestHybridCacheBuilder:
         """Test building Paper2ReferencesCache."""
         builder = HybridCacheBuilder().with_all_memory()
         cache = builder.build_paper2references_cache()
-        
+
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
         paper, info = await cache.get_paper_info(paper)
@@ -89,9 +89,8 @@ class TestHybridCacheBuilder:
         """Test building Paper2CitationsCache."""
         builder = HybridCacheBuilder().with_all_memory()
         cache = builder.build_paper2citations_cache()
-        
+
         paper = Paper(identifiers={"doi:123"})
         await cache.set_paper_info(paper, {"title": "Test"})
         paper, info = await cache.get_paper_info(paper)
         assert info["title"] == "Test"
-

@@ -43,10 +43,10 @@ class TestPaper2CitationsCache:
             Paper(identifiers={"doi:cit1"}),
             Paper(identifiers={"doi:cit2"}),
         ]
-        
+
         await cache.add_pending_citations_for_paper(paper, citations)
         result = await cache.get_pending_citations_for_paper(paper)
-        
+
         assert len(result) == 2
 
     @pytest.mark.asyncio
@@ -54,7 +54,6 @@ class TestPaper2CitationsCache:
         """Test citation link commitment."""
         paper = Paper(identifiers={"doi:123"})
         citation = Paper(identifiers={"doi:cit1"})
-        
+
         await cache.commit_citation_link(paper, citation)
         assert await cache.is_citation_link_committed(paper, citation) is True
-

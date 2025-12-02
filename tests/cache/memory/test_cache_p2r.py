@@ -43,10 +43,10 @@ class TestPaper2ReferencesCache:
             Paper(identifiers={"doi:ref1"}),
             Paper(identifiers={"doi:ref2"}),
         ]
-        
+
         await cache.add_pending_references_for_paper(paper, references)
         result = await cache.get_pending_references_for_paper(paper)
-        
+
         assert len(result) == 2
 
     @pytest.mark.asyncio
@@ -54,7 +54,6 @@ class TestPaper2ReferencesCache:
         """Test reference link commitment."""
         paper = Paper(identifiers={"doi:123"})
         reference = Paper(identifiers={"doi:ref1"})
-        
+
         await cache.commit_reference_link(paper, reference)
         assert await cache.is_reference_link_committed(paper, reference) is True
-

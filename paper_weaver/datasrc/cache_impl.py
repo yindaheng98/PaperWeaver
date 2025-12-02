@@ -26,13 +26,13 @@ class MemoryDataSrcCache(DataSrcCacheIface):
             entry = self._data.get(key)
             if entry is None:
                 return None
-            
+
             value, expire_at = entry
             if expire_at is not None and time.monotonic() >= expire_at:
                 # Entry has expired, remove it
                 del self._data[key]
                 return None
-            
+
             return value
 
     async def set(self, key: str, value: Any, expire: float | None = None) -> None:

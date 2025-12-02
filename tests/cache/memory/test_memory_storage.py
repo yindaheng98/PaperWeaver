@@ -49,7 +49,7 @@ class TestMemoryIdentifierRegistry:
         cid2 = await registry.register({"arxiv:456"})
         # Now register with both - should merge
         cid3 = await registry.register({"doi:123", "arxiv:456"})
-        
+
         # After merge, both should resolve to same canonical ID
         all_ids = await registry.get_all_identifiers(cid3)
         assert "doi:123" in all_ids
@@ -69,11 +69,11 @@ class TestMemoryIdentifierRegistry:
         await registry.register({"doi:1"})
         await registry.register({"doi:2"})
         await registry.register({"doi:3"})
-        
+
         canonical_ids = []
         async for cid in registry.iterate_canonical_ids():
             canonical_ids.append(cid)
-        
+
         assert len(canonical_ids) == 3
 
     @pytest.mark.asyncio
@@ -89,11 +89,11 @@ class TestMemoryIdentifierRegistry:
         cid1 = await registry.register({"id:A"})
         cid2 = await registry.register({"id:B"})
         cid3 = await registry.register({"id:C"})
-        
+
         # Merge A, B, C by registering overlapping sets
         await registry.register({"id:A", "id:B"})
         await registry.register({"id:B", "id:C"})
-        
+
         # All should now be under the same canonical ID
         final_cid = await registry.get_canonical_id({"id:C"})
         all_ids = await registry.get_all_identifiers(final_cid)
@@ -165,7 +165,7 @@ class TestMemoryCommittedLinkStorage:
         await storage.commit_link("paper1", "author1")
         await storage.commit_link("paper1", "author2")
         await storage.commit_link("paper1", "author3")
-        
+
         assert await storage.is_link_committed("paper1", "author1") is True
         assert await storage.is_link_committed("paper1", "author2") is True
         assert await storage.is_link_committed("paper1", "author3") is True
@@ -210,4 +210,3 @@ class TestMemoryPendingListStorage:
         await storage.set_pending_identifier_sets("author1", [{"doi:2"}, {"doi:3"}])
         result = await storage.get_pending_identifier_sets("author1")
         assert len(result) == 2
-
