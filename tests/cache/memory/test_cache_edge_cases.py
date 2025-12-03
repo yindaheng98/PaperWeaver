@@ -6,7 +6,7 @@ import pytest
 import asyncio
 
 from paper_weaver.dataclass import Paper, Author
-from paper_weaver.cache import create_memory_author_weaver_cache
+from paper_weaver.cache import create_memory_weaver_cache
 
 
 class TestEdgeCases:
@@ -14,7 +14,7 @@ class TestEdgeCases:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_author_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_empty_identifiers_set(self, cache):

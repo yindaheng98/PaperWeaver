@@ -1,7 +1,7 @@
 """
 Unit tests for cache factory functions and builders.
 
-Tests: HybridCacheBuilder, create_memory_author_weaver_cache, etc.
+Tests: HybridCacheBuilder, create_memory_weaver_cache, etc.
 """
 
 import pytest
@@ -16,22 +16,10 @@ class TestHybridCacheBuilder:
     """Tests for HybridCacheBuilder."""
 
     @pytest.mark.asyncio
-    async def test_build_author_weaver_cache(self):
-        """Test building author weaver cache with defaults."""
+    async def test_build_weaver_cache(self):
+        """Test building weaver cache with defaults."""
         builder = HybridCacheBuilder()
-        cache = builder.build_author_weaver_cache()
-
-        # Verify it works
-        paper = Paper(identifiers={"doi:123"})
-        await cache.set_paper_info(paper, {"title": "Test"})
-        paper, info = await cache.get_paper_info(paper)
-        assert info["title"] == "Test"
-
-    @pytest.mark.asyncio
-    async def test_build_paper_weaver_cache(self):
-        """Test building paper weaver cache with defaults."""
-        builder = HybridCacheBuilder()
-        cache = builder.build_paper_weaver_cache()
+        cache = builder.build_weaver_cache()
 
         # Verify it works
         paper = Paper(identifiers={"doi:123"})
@@ -43,7 +31,7 @@ class TestHybridCacheBuilder:
     async def test_with_all_memory(self):
         """Test with_all_memory convenience method."""
         builder = HybridCacheBuilder().with_all_memory()
-        cache = builder.build_author_weaver_cache()
+        cache = builder.build_weaver_cache()
 
         # Verify it works
         paper = Paper(identifiers={"doi:123"})

@@ -7,59 +7,17 @@ using either memory or Redis backends.
 
 from .memory import MemoryIdentifierRegistry, MemoryInfoStorage, MemoryCommittedLinkStorage, MemoryPendingListStorage
 from .redis import RedisIdentifierRegistry, RedisInfoStorage, RedisCommittedLinkStorage, RedisPendingListStorage
-from .impl_full import (
-    FullAuthorWeaverCache,
-    FullPaperWeaverCache,
-    Author2PapersCache,
-    Paper2AuthorsCache,
-    Paper2ReferencesCache,
-    Paper2CitationsCache,
-    Paper2VenuesCache,
-)
+from .impl_full import FullWeaverCache
+from .impl_a2p import Author2PapersCache
+from .impl_p2a import Paper2AuthorsCache
+from .impl_p2r import Paper2ReferencesCache
+from .impl_p2c import Paper2CitationsCache
+from .impl_p2v import Paper2VenuesCache
 
 
-def create_memory_author_weaver_cache() -> FullAuthorWeaverCache:
-    """Create an in-memory cache for AuthorWeaver."""
-    return FullAuthorWeaverCache(
-        paper_registry=MemoryIdentifierRegistry(),
-        paper_info_storage=MemoryInfoStorage(),
-        author_registry=MemoryIdentifierRegistry(),
-        author_info_storage=MemoryInfoStorage(),
-        venue_registry=MemoryIdentifierRegistry(),
-        venue_info_storage=MemoryInfoStorage(),
-        committed_author_links=MemoryCommittedLinkStorage(),
-        pending_papers=MemoryPendingListStorage(),
-        pending_authors=MemoryPendingListStorage(),
-    )
-
-
-def create_redis_author_weaver_cache(
-    redis_client, prefix: str = "pw", expire: int | None = None
-) -> FullAuthorWeaverCache:
-    """
-    Create a Redis-backed cache for AuthorWeaver.
-
-    Args:
-        redis_client: An async Redis client (e.g., from redis.asyncio)
-        prefix: Prefix for all Redis keys
-        expire: TTL in seconds for keys, None means no expiration
-    """
-    return FullAuthorWeaverCache(
-        paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg", expire),
-        paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info", expire),
-        author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg", expire),
-        author_info_storage=RedisInfoStorage(redis_client, f"{prefix}:author_info", expire),
-        venue_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:venue_reg", expire),
-        venue_info_storage=RedisInfoStorage(redis_client, f"{prefix}:venue_info", expire),
-        committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap", expire),
-        pending_papers=RedisPendingListStorage(redis_client, f"{prefix}:pending_a2p", expire),
-        pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a", expire),
-    )
-
-
-def create_memory_paper_weaver_cache() -> FullPaperWeaverCache:
-    """Create an in-memory cache for full paper operations."""
-    return FullPaperWeaverCache(
+def create_memory_weaver_cache() -> FullWeaverCache:
+    """Create an in-memory cache for full weaver operations."""
+    return FullWeaverCache(
         paper_registry=MemoryIdentifierRegistry(),
         paper_info_storage=MemoryInfoStorage(),
         author_registry=MemoryIdentifierRegistry(),
@@ -69,6 +27,7 @@ def create_memory_paper_weaver_cache() -> FullPaperWeaverCache:
         committed_author_links=MemoryCommittedLinkStorage(),
         committed_reference_links=MemoryCommittedLinkStorage(),
         committed_venue_links=MemoryCommittedLinkStorage(),
+        pending_papers=MemoryPendingListStorage(),
         pending_authors=MemoryPendingListStorage(),
         pending_references=MemoryPendingListStorage(),
         pending_citations=MemoryPendingListStorage(),
@@ -76,18 +35,18 @@ def create_memory_paper_weaver_cache() -> FullPaperWeaverCache:
     )
 
 
-def create_redis_paper_weaver_cache(
+def create_redis_weaver_cache(
     redis_client, prefix: str = "pw", expire: int | None = None
-) -> FullPaperWeaverCache:
+) -> FullWeaverCache:
     """
-    Create a Redis-backed cache for full paper operations.
+    Create a Redis-backed cache for full weaver operations.
 
     Args:
         redis_client: An async Redis client (e.g., from redis.asyncio)
         prefix: Prefix for all Redis keys
         expire: TTL in seconds for keys, None means no expiration
     """
-    return FullPaperWeaverCache(
+    return FullWeaverCache(
         paper_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:paper_reg", expire),
         paper_info_storage=RedisInfoStorage(redis_client, f"{prefix}:paper_info", expire),
         author_registry=RedisIdentifierRegistry(redis_client, f"{prefix}:author_reg", expire),
@@ -97,6 +56,7 @@ def create_redis_paper_weaver_cache(
         committed_author_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_ap", expire),
         committed_reference_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_pr", expire),
         committed_venue_links=RedisCommittedLinkStorage(redis_client, f"{prefix}:committed_pv", expire),
+        pending_papers=RedisPendingListStorage(redis_client, f"{prefix}:pending_a2p", expire),
         pending_authors=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2a", expire),
         pending_references=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2r", expire),
         pending_citations=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2c", expire),
@@ -120,7 +80,7 @@ class HybridCacheBuilder:
             .with_memory_author_registry()
             .with_redis_author_info("author_info")
             .with_memory_committed_author_links()
-            .build_author_weaver_cache())
+            .build_weaver_cache())
     """
 
     def __init__(self, redis_client=None, expire: int | None = None):
@@ -348,25 +308,10 @@ class HybridCacheBuilder:
         if self._pending_venues is None:
             self._pending_venues = MemoryPendingListStorage()
 
-    def build_author_weaver_cache(self) -> FullAuthorWeaverCache:
-        """Build a FullAuthorWeaverCache with configured components."""
+    def build_weaver_cache(self) -> FullWeaverCache:
+        """Build a FullWeaverCache with configured components."""
         self._ensure_defaults()
-        return FullAuthorWeaverCache(
-            paper_registry=self._paper_registry,
-            paper_info_storage=self._paper_info,
-            author_registry=self._author_registry,
-            author_info_storage=self._author_info,
-            venue_registry=self._venue_registry,
-            venue_info_storage=self._venue_info,
-            committed_author_links=self._committed_author_links,
-            pending_papers=self._pending_papers,
-            pending_authors=self._pending_authors,
-        )
-
-    def build_paper_weaver_cache(self) -> FullPaperWeaverCache:
-        """Build a FullPaperWeaverCache with configured components."""
-        self._ensure_defaults()
-        return FullPaperWeaverCache(
+        return FullWeaverCache(
             paper_registry=self._paper_registry,
             paper_info_storage=self._paper_info,
             author_registry=self._author_registry,
@@ -376,6 +321,7 @@ class HybridCacheBuilder:
             committed_author_links=self._committed_author_links,
             committed_reference_links=self._committed_reference_links,
             committed_venue_links=self._committed_venue_links,
+            pending_papers=self._pending_papers,
             pending_authors=self._pending_authors,
             pending_references=self._pending_references,
             pending_citations=self._pending_citations,

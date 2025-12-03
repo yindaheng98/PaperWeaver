@@ -8,10 +8,7 @@ from iface_a2p.py, iface_p2a.py, iface_p2r.py, iface_p2c.py, iface_p2v.py.
 import pytest
 
 from paper_weaver.dataclass import Paper, Author, Venue
-from paper_weaver.cache import (
-    create_memory_author_weaver_cache,
-    create_memory_paper_weaver_cache,
-)
+from paper_weaver.cache import create_memory_weaver_cache
 
 
 class TestIntegrationAuthor2PapersWorkflow:
@@ -23,7 +20,7 @@ class TestIntegrationAuthor2PapersWorkflow:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_author_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_complete_author_to_papers_cycle(self, cache):
@@ -105,7 +102,7 @@ class TestIntegrationPaper2AuthorsWorkflow:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_author_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_complete_paper_to_authors_cycle(self, cache):
@@ -148,7 +145,7 @@ class TestIntegrationPaper2ReferencesWorkflow:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_paper_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_complete_paper_to_references_cycle(self, cache):
@@ -180,7 +177,7 @@ class TestIntegrationPaper2CitationsWorkflow:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_paper_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_complete_paper_to_citations_cycle(self, cache):
@@ -212,7 +209,7 @@ class TestIntegrationPaper2VenuesWorkflow:
 
     @pytest.fixture
     def cache(self):
-        return create_memory_paper_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_complete_paper_to_venues_cycle(self, cache):

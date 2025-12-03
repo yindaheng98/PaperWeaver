@@ -13,14 +13,14 @@ Key concepts:
 
 Usage:
     # Simple in-memory cache
-    from paper_weaver.cache import create_memory_author_weaver_cache
-    cache = create_memory_author_weaver_cache()
+    from paper_weaver.cache import create_memory_weaver_cache
+    cache = create_memory_weaver_cache()
 
     # Redis-backed cache
     import redis.asyncio as redis
-    from paper_weaver.cache import create_redis_author_weaver_cache
+    from paper_weaver.cache import create_redis_weaver_cache
     r = redis.Redis()
-    cache = create_redis_author_weaver_cache(r)
+    cache = create_redis_weaver_cache(r)
 
     # Hybrid cache with builder
     from paper_weaver.cache import HybridCacheBuilder
@@ -32,7 +32,7 @@ Usage:
         .with_memory_committed_author_links()
         .with_memory_pending_papers()   # for author's pending papers
         .with_memory_pending_authors()  # for paper's pending authors
-        .build_author_weaver_cache())
+        .build_weaver_cache())
 """
 
 # Identifier Registry
@@ -73,8 +73,7 @@ from .redis import (  # noqa: F401
 
 # Composite Cache
 from .impl_full import (
-    FullAuthorWeaverCache,
-    FullPaperWeaverCache,
+    FullWeaverCache,
 )
 from .impl import (  # noqa: F401
     ComposableCacheBase,
@@ -102,10 +101,8 @@ from .impl_p2v import (  # noqa: F401
 
 # Factory functions
 from .factory import (
-    create_memory_author_weaver_cache,
-    create_redis_author_weaver_cache,
-    create_memory_paper_weaver_cache,
-    create_redis_paper_weaver_cache,
+    create_memory_weaver_cache,
+    create_redis_weaver_cache,
     HybridCacheBuilder,
 )
 
@@ -138,12 +135,9 @@ __all__ = [
     "Paper2ReferencesCache",
     "Paper2CitationsCache",
     "Paper2VenuesCache",
-    "FullAuthorWeaverCache",
-    "FullPaperWeaverCache",
+    "FullWeaverCache",
     # Factory
-    "create_memory_author_weaver_cache",
-    "create_redis_author_weaver_cache",
-    "create_memory_paper_weaver_cache",
-    "create_redis_paper_weaver_cache",
+    "create_memory_weaver_cache",
+    "create_redis_weaver_cache",
     "HybridCacheBuilder",
 ]

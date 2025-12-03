@@ -1,9 +1,9 @@
 """
-Full Combined Caches - Complete cache implementations combining multiple capabilities.
+Full Combined Cache - Complete cache implementation combining all capabilities.
 
 Provides:
-- FullAuthorWeaverCache: Combines Author2Papers and Paper2Authors for AuthorWeaver
-- FullPaperWeaverCache: Combines Paper2References, Paper2Citations, Paper2Authors, and Paper2Venues
+- FullWeaverCache: Combines Author2Papers, Paper2Authors, Paper2References, 
+  Paper2Citations, and Paper2Venues for complete weaver functionality.
 """
 
 
@@ -20,42 +20,7 @@ from .impl_p2r import Paper2ReferencesCache
 from .impl_p2v import Paper2VenuesCache
 
 
-class FullAuthorWeaverCache(Author2PapersCache, Paper2AuthorsCache):
-    """
-    Combined cache for AuthorWeaver with both author->papers and paper->authors.
-
-    This cache can be used with AuthorWeaver.
-    """
-
-    def __init__(
-        self,
-        paper_registry: IdentifierRegistryIface,
-        paper_info_storage: InfoStorageIface,
-        author_registry: IdentifierRegistryIface,
-        author_info_storage: InfoStorageIface,
-        venue_registry: IdentifierRegistryIface,
-        venue_info_storage: InfoStorageIface,
-        committed_author_links: CommittedLinkStorageIface,
-        pending_papers: PendingListStorageIface,
-        pending_authors: PendingListStorageIface,
-    ):
-        # Initialize base with shared components
-        ComposableCacheBase.__init__(
-            self,
-            paper_registry, paper_info_storage,
-            author_registry, author_info_storage,
-            venue_registry, venue_info_storage
-        )
-        self._committed_author_links = committed_author_links
-        self._pending_papers_manager = PendingListManager(
-            self._paper_manager._registry, pending_papers
-        )
-        self._pending_authors_manager = PendingListManager(
-            self._author_manager._registry, pending_authors
-        )
-
-
-class FullPaperWeaverCache(Paper2ReferencesCache, Paper2CitationsCache, Paper2AuthorsCache, Paper2VenuesCache):
+class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCache, Paper2CitationsCache, Paper2VenuesCache):
     """
     Combined cache for paper operations (references, citations, authors, venues).
     """
@@ -71,6 +36,7 @@ class FullPaperWeaverCache(Paper2ReferencesCache, Paper2CitationsCache, Paper2Au
         committed_author_links: CommittedLinkStorageIface,
         committed_reference_links: CommittedLinkStorageIface,
         committed_venue_links: CommittedLinkStorageIface,
+        pending_papers: PendingListStorageIface,
         pending_authors: PendingListStorageIface,
         pending_references: PendingListStorageIface,
         pending_citations: PendingListStorageIface,
@@ -87,6 +53,9 @@ class FullPaperWeaverCache(Paper2ReferencesCache, Paper2CitationsCache, Paper2Au
         self._committed_venue_links = committed_venue_links
         self._pending_authors_manager = PendingListManager(
             self._author_manager._registry, pending_authors
+        )
+        self._pending_papers_manager = PendingListManager(
+            self._paper_manager._registry, pending_papers
         )
         self._pending_references_manager = PendingListManager(
             self._paper_manager._registry, pending_references

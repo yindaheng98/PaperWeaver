@@ -1,24 +1,21 @@
 """
-Unit tests for full cache implementations.
+Unit tests for full cache implementation.
 
-Tests: FullAuthorWeaverCache, FullPaperWeaverCache
+Tests: FullWeaverCache
 """
 
 import pytest
 
 from paper_weaver.dataclass import Paper, Author, Venue
-from paper_weaver.cache import (
-    create_memory_author_weaver_cache,
-    create_memory_paper_weaver_cache,
-)
+from paper_weaver.cache import create_memory_weaver_cache
 
 
-class TestFullAuthorWeaverCache:
-    """Tests for FullAuthorWeaverCache."""
+class TestFullWeaverCache:
+    """Tests for FullWeaverCache."""
 
     @pytest.fixture
     def cache(self):
-        return create_memory_author_weaver_cache()
+        return create_memory_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_paper_info_operations(self, cache):
@@ -89,14 +86,6 @@ class TestFullAuthorWeaverCache:
         # Verify links committed
         for author in authors:
             assert await cache.is_author_link_committed(paper, author) is True
-
-
-class TestFullPaperWeaverCache:
-    """Tests for FullPaperWeaverCache."""
-
-    @pytest.fixture
-    def cache(self):
-        return create_memory_paper_weaver_cache()
 
     @pytest.mark.asyncio
     async def test_paper_to_references_workflow(self, cache):
