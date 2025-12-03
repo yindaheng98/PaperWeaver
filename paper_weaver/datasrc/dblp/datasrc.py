@@ -105,9 +105,8 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             raise ValueError("No valid DBLP venue key found for paper")
 
         # Fetch full venue page (cached)
-        venue = Venue(identifiers={f"venue:dblp:key:{venue_key}"})
-        updated_venue, _ = await self.get_venue_info(venue)
-        return [updated_venue]
+        venue_page = await self._fetch_venue_page_by_key(venue_key)
+        return [venue_page_to_venue(venue_page)]
 
     async def get_authors_by_paper(self, paper: Paper) -> list[Author]:
         """
