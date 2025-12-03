@@ -106,6 +106,12 @@ from .factory import (
     HybridCacheBuilder,
 )
 
+# For command-line argument parsing
+from .argparse import (  # noqa: F401
+    add_cache_args,
+    create_cache_from_args,
+)
+
 __all__ = [
     # Identifier Registry
     "IdentifierRegistryIface",
@@ -140,4 +146,7 @@ __all__ = [
     "create_memory_weaver_cache",
     "create_redis_weaver_cache",
     "HybridCacheBuilder",
+    # Argparse
+    "add_cache_args",
+    "create_cache_from_args",
 ]
