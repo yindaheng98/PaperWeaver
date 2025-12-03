@@ -17,7 +17,7 @@ from ...dataclass import DataSrc, Paper, Author, Venue
 from .parser import RecordPageParser, PersonPageParser, VenuePageParser
 from .record import paper_to_dblp_key, author_from_record_author, record_to_paper, record_to_info
 from .person import author_to_dblp_pid, person_to_author, person_to_info
-from .venue import venue_to_dblp_key, venue_from_paper_info, venue_to_venue, venue_to_info
+from .venue import venue_to_dblp_key, venue_key_from_paper, venue_to_venue, venue_to_info
 from .utils import fetch_xml
 
 
@@ -85,6 +85,20 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         updated_paper.identifiers.update(paper.identifiers)
         info = record_to_info(record_page)
         return updated_paper, info
+
+    async def get_venues_by_paper(self, paper: Paper) -> list[Venue]:
+        """Get venues for a paper from DBLP."""
+        updated_paper, info = await self.get_paper_info(paper)
+
+        # Extract venue key from dblp:url or dblp-url: identifier
+        venue_key = venue_key_from_paper(updated_paper, info)
+        if venue_key is None:
+            raise ValueError("No valid DBLP venue key found for paper")
+
+        # Fetch full venue page (cached)
+        venue = Venue(identifiers={f"dblp-venue:{venue_key}"})
+        updated_venue, _ = await self.get_venue_info(venue)
+        return [updated_venue]
 
     async def get_references_by_paper(self, paper: Paper) -> list[Paper]:
         """
