@@ -20,8 +20,8 @@ def author_to_dblp_pid(author: Author) -> str | None:
         DBLP person ID (e.g., "h/KaimingHe") or None if not found
     """
     for ident in author.identifiers:
-        if ident.startswith("dblp-author:"):
-            return ident[12:]  # Remove "dblp-author:" prefix
+        if ident.startswith("author:dblp:pid:"):
+            return ident[16:]  # Remove "author:dblp:pid:" prefix
     return None
 
 
@@ -29,21 +29,22 @@ def person_to_author(person: PersonPageParser) -> Author:
     """
     Convert PersonPageParser to Author with identifiers.
 
-    Identifiers extracted:
-    - dblp-author:{pid} - DBLP person ID
-    - dblp-author-name:{name} - Author name
+    Identifiers extracted (format: author:{info_key}:{value}):
+    - author:dblp:pid:{pid} - DBLP person ID (matches info["dblp:pid"])
+    - author:name:{name} - Author name (matches info["name"])
+    - author:orcid:{orcid} - ORCID (matches info["orcid"])
     - {url} - Author URLs
     """
     identifiers = set()
 
     if person.pid:
-        identifiers.add(f"dblp-author:{person.pid}")
+        identifiers.add(f"author:dblp:pid:{person.pid}")
 
     if person.name:
-        identifiers.add(f"dblp-author-name:{person.name}")
+        identifiers.add(f"author:name:{person.name}")
 
     if person.orcid:
-        identifiers.add(f"orcid:{person.orcid}")
+        identifiers.add(f"author:orcid:{person.orcid}")
 
     for url in person.urls:
         identifiers.add(url)
