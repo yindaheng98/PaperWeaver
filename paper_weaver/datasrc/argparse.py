@@ -42,31 +42,37 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
 def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
     """Create a DataSrc from parsed command-line arguments."""
     # Create cache
-    if args.datasrc_cache_mode == "memory":
-        cache = MemoryDataSrcCache()
-    else:
-        import redis.asyncio as redis
-        client = redis.from_url(args.datasrc_redis_url)
-        cache = RedisDataSrcCache(client, args.datasrc_redis_prefix, args.datasrc_redis_expire)
+    match args.datasrc_cache_mode:
+        case "memory":
+            cache = MemoryDataSrcCache()
+        case "redis":
+            import redis.asyncio as redis
+            client = redis.from_url(args.datasrc_redis_url)
+            cache = RedisDataSrcCache(client, args.datasrc_redis_prefix, args.datasrc_redis_expire)
+        case _:
+            raise ValueError(f"Unknown datasrc cache mode: {args.datasrc_cache_mode}")
 
-    if args.datasrc_type == "semanticscholar":
-        http_headers = {"x-api-key": args.datasrc_ss_api_key} if args.datasrc_ss_api_key else None
-        return SemanticScholarDataSrc(
-            cache=cache,
-            max_concurrent=args.datasrc_max_concurrent,
-            cache_ttl=args.datasrc_ss_cache_ttl,
-            http_headers=http_headers,
-            http_proxy=args.datasrc_http_proxy,
-            http_timeout=args.datasrc_http_timeout
-        )
-
-    # DBLP
-    return DBLPDataSrc(
-        cache=cache,
-        max_concurrent=args.datasrc_max_concurrent,
-        record_cache_ttl=args.datasrc_dblp_record_ttl,
-        person_cache_ttl=args.datasrc_dblp_person_ttl,
-        venue_cache_ttl=args.datasrc_dblp_venue_ttl,
-        http_proxy=args.datasrc_http_proxy,
-        http_timeout=args.datasrc_http_timeout
-    )
+    # Create datasrc
+    match args.datasrc_type:
+        case "semanticscholar":
+            http_headers = {"x-api-key": args.datasrc_ss_api_key} if args.datasrc_ss_api_key else None
+            return SemanticScholarDataSrc(
+                cache=cache,
+                max_concurrent=args.datasrc_max_concurrent,
+                cache_ttl=args.datasrc_ss_cache_ttl,
+                http_headers=http_headers,
+                http_proxy=args.datasrc_http_proxy,
+                http_timeout=args.datasrc_http_timeout
+            )
+        case "dblp":
+            return DBLPDataSrc(
+                cache=cache,
+                max_concurrent=args.datasrc_max_concurrent,
+                record_cache_ttl=args.datasrc_dblp_record_ttl,
+                person_cache_ttl=args.datasrc_dblp_person_ttl,
+                venue_cache_ttl=args.datasrc_dblp_venue_ttl,
+                http_proxy=args.datasrc_http_proxy,
+                http_timeout=args.datasrc_http_timeout
+            )
+        case _:
+            raise ValueError(f"Unknown datasrc type: {args.datasrc_type}")

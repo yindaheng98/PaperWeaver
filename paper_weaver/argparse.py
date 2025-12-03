@@ -24,6 +24,8 @@ def create_weaver_from_args(
     cache: FullWeaverCache
 ):
     """Create a Weaver from parsed command-line arguments."""
-    if args.weaver_type == "a2p2v":
-        return Author2Paper2VenueWeaver(src=src, dst=dst, cache=cache)
-    raise ValueError(f"Unknown weaver type: {args.weaver_type}")
+    match args.weaver_type:
+        case "a2p2v":
+            return Author2Paper2VenueWeaver(src=src, dst=dst, cache=cache)
+        case _:
+            raise ValueError(f"Unknown weaver type: {args.weaver_type}")

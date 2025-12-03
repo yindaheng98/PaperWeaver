@@ -27,11 +27,15 @@ def create_datadst_from_args(args: argparse.Namespace) -> tuple[DataDst, object]
     Returns:
         (DataDst instance, driver to close later)
     """
-    from neo4j import AsyncGraphDatabase
+    match args.datadst_type:
+        case "neo4j":
+            from neo4j import AsyncGraphDatabase
 
-    driver = AsyncGraphDatabase.driver(
-        args.datadst_neo4j_uri,
-        auth=(args.datadst_neo4j_user, args.datadst_neo4j_password)
-    )
-    session = driver.session(database=args.datadst_neo4j_database)
-    return Neo4jDataDst(session), driver
+            driver = AsyncGraphDatabase.driver(
+                args.datadst_neo4j_uri,
+                auth=(args.datadst_neo4j_user, args.datadst_neo4j_password)
+            )
+            session = driver.session(database=args.datadst_neo4j_database)
+            return Neo4jDataDst(session), driver
+        case _:
+            raise ValueError(f"Unknown datadst type: {args.datadst_type}")
