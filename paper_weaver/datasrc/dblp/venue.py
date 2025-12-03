@@ -78,9 +78,11 @@ def venue_page_to_venue(parser: VenuePageParser) -> Venue:
 
     if parser.proceedings_title:
         identifiers.add(f"proceedings_title:{parser.proceedings_title}")
+        identifiers.add(f"title:{parser.proceedings_title}")
 
     if parser.proceedings_isbn:
         identifiers.add(f"proceedings_isbn:{parser.proceedings_isbn}")
+        identifiers.add(f"isbn:{parser.proceedings_isbn}")
 
     for ee in parser.proceedings_ees:
         identifiers.add(ee)
