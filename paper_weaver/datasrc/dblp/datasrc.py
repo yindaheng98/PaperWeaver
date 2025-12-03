@@ -32,14 +32,13 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
     - Venue: "venue:dblp:key:{key}", "venue:title:{title}", "venue:proceedings_title:{title}"
     """
 
-    # Default cache TTL in seconds (7 days)
-    DEFAULT_CACHE_TTL = 7 * 24 * 60 * 60
-
     def __init__(
         self,
         cache: DataSrcCacheIface,
         max_concurrent: int = 10,
-        cache_ttl: int | None = None,
+        record_cache_ttl: int | None = None,
+        person_cache_ttl: int | None = None,
+        venue_cache_ttl: int | None = None,
         http_proxy: str | None = None,
         http_timeout: int = 30
     ):
@@ -49,12 +48,16 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         Args:
             cache: Cache implementation
             max_concurrent: Maximum concurrent requests
-            cache_ttl: Cache time-to-live in seconds (None = no expiration)
+            record_cache_ttl: Cache TTL for record pages in seconds (None = no expiration)
+            person_cache_ttl: Cache TTL for person pages in seconds (None = no expiration)
+            venue_cache_ttl: Cache TTL for venue pages in seconds (None = no expiration)
             http_proxy: Optional HTTP proxy URL
             http_timeout: HTTP request timeout in seconds
         """
         CachedAsyncPool.__init__(self, cache, max_concurrent)
-        self._cache_ttl = cache_ttl if cache_ttl is not None else self.DEFAULT_CACHE_TTL
+        self._record_cache_ttl = record_cache_ttl
+        self._person_cache_ttl = person_cache_ttl
+        self._venue_cache_ttl = venue_cache_ttl
         self._http_proxy = http_proxy
         self._http_timeout = http_timeout
 
@@ -69,7 +72,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             url,
             lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
             RecordPageParser,
-            self._cache_ttl
+            self._record_cache_ttl
         )
         if record_page is None:
             raise ValueError("Failed to fetch record page for paper")
@@ -158,7 +161,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             url,
             lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
             PersonPageParser,
-            self._cache_ttl
+            self._person_cache_ttl
         )
         if person_page is None:
             raise ValueError("Failed to fetch person page for author")
@@ -206,7 +209,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             url,
             lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
             VenuePageParser,
-            self._cache_ttl
+            self._venue_cache_ttl
         )
         if venue_page is None:
             raise ValueError("Failed to fetch venue page for venue")
