@@ -8,18 +8,8 @@ Handles parsing of:
 Example record page: https://dblp.org/rec/conf/cvpr/HeZRS16.xml
 """
 
-import re
 import xml.etree.ElementTree as ElementTree
 from typing import Iterator
-from urllib.parse import urlparse
-
-
-def _url2doi(url: str) -> str | None:
-    """Extract DOI from a URL."""
-    u = urlparse(url)
-    if u.netloc != "doi.org":
-        return None
-    return re.sub(r"^/+", "", u.path)
 
 
 def _parse_xml(text: str) -> ElementTree.Element | None:
@@ -58,11 +48,13 @@ class RecordAuthor:
         """Get ORCID identifier."""
         return self.data.attrib.get("orcid")
 
-    def __repr__(self) -> str:
-        return f"RecordAuthor(name={self.name!r}, pid={self.pid!r})"
+    def __dict__(self) -> dict:
+        """
+        Convert to dictionary.
 
-    def to_dict(self) -> dict:
-        """Convert to dictionary."""
+        Returns:
+            Dict with author info (name, pid, orcid)
+        """
         result = {}
         if self.name:
             result["name"] = self.name
@@ -71,6 +63,9 @@ class RecordAuthor:
         if self.orcid:
             result["orcid"] = self.orcid
         return result
+
+    def __repr__(self) -> str:
+        return f"RecordAuthor(name={self.name!r}, pid={self.pid!r})"
 
 
 class RecordParser:
@@ -111,133 +106,172 @@ class RecordParser:
     @property
     def title(self) -> str | None:
         """Get publication title."""
-        for child in self.data:
-            if child.tag == "title":
-                return " ".join(t for t in child.itertext())
-        return None
-
-    @property
-    def year(self) -> int | None:
-        """Get publication year."""
-        for child in self.data:
-            if child.tag == "year" and child.text:
-                try:
-                    return int(child.text)
-                except ValueError:
-                    return None
-        return None
-
-    @property
-    def venue(self) -> str | None:
-        """Get venue name (journal/booktitle/series)."""
-        tag_map = {
-            'inproceedings': 'booktitle',
-            'proceedings': 'booktitle',
-            'article': 'journal',
-            'incollection': 'booktitle',
-            'book': 'series'
-        }
-        target_tag = tag_map.get(self.data.tag)
-        if target_tag:
-            for child in self.data:
-                if child.tag == target_tag:
-                    return child.text
-        return None
-
-    @property
-    def venue_type(self) -> str | None:
-        """Get venue type (journal/booktitle/series)."""
-        tag_map = {
-            'inproceedings': 'booktitle',
-            'proceedings': 'booktitle',
-            'article': 'journal',
-            'incollection': 'booktitle',
-            'book': 'series'
-        }
-        return tag_map.get(self.data.tag)
-
-    @property
-    def doi(self) -> str | None:
-        """Get DOI."""
-        for ee in self._ee():
-            doi = _url2doi(ee)
-            if doi:
-                return doi
-        return None
-
-    def _ee(self) -> Iterator[str]:
-        """Iterate over ee (electronic edition) URLs."""
-        for child in self.data:
-            if child.tag == "ee" and child.text:
-                yield child.text
+        for title in self.data.findall("title"):
+            return " ".join(t for t in title.itertext())
 
     @property
     def pages(self) -> str | None:
         """Get pages."""
-        for child in self.data:
-            if child.tag == "pages" and child.text:
-                return child.text
-        return None
+        for pages in self.data.findall("pages"):
+            if pages.text:
+                return pages.text
+
+    @property
+    def year(self) -> int | None:
+        """Get publication year."""
+        for year in self.data.findall("year"):
+            if year.text:
+                try:
+                    return int(year.text)
+                except ValueError:
+                    return None
+
+    @property
+    def month(self) -> int | None:
+        """Get publication month."""
+        for year in self.data.findall("month"):
+            if year.text:
+                try:
+                    return int(year.text)
+                except ValueError:
+                    return None
 
     @property
     def volume(self) -> str | None:
         """Get volume."""
-        for child in self.data:
-            if child.tag == "volume" and child.text:
-                return child.text
-        return None
+        for volume in self.data.findall("volume"):
+            if volume.text:
+                return volume.text
+
+    @property
+    def series(self) -> str | None:
+        """Get series."""
+        for series in self.data.findall("series"):
+            if series.text:
+                return series.text
+
+    @property
+    def booktitle(self) -> str | None:
+        """Get booktitle."""
+        for booktitle in self.data.findall("booktitle"):
+            if booktitle.text:
+                return booktitle.text
+
+    @property
+    def journal(self) -> str | None:
+        """Get journal."""
+        for journal in self.data.findall("journal"):
+            if journal.text:
+                return journal.text
 
     @property
     def number(self) -> str | None:
         """Get number."""
-        for child in self.data:
-            if child.tag == "number" and child.text:
-                return child.text
-        return None
+        for number in self.data.findall("number"):
+            if number.text:
+                return number.text
+
+    @property
+    def ees(self) -> Iterator[str]:
+        """Iterate over ee (electronic edition) URLs."""
+        for ee in self.data.findall("ee"):
+            if ee.text:
+                yield ee.text
+
+    @property
+    def crossref(self) -> str | None:
+        """Get crossref."""
+        for crossref in self.data.findall("crossref"):
+            if crossref.text:
+                return crossref.text
+
+    @property
+    def url(self) -> str | None:
+        """Get url."""
+        for url in self.data.findall("url"):
+            if url.text:
+                return url.text
+
+    @property
+    def stream(self) -> str | None:
+        """Get stream."""
+        for url in self.data.findall("stream"):
+            if url.text:
+                return url.text
+
+    @property
+    def venue(self) -> str | None:
+        """Get venue name (journal/booktitle/series)."""
+        if self.type in ["article"]:
+            return self.journal
+        if self.type in ["proceedings", "inproceedings", "incollection"]:
+            return self.booktitle
+        if self.type in ["book"]:
+            return self.series
+
+    @property
+    def venue_type(self) -> str | None:
+        """Get venue type (journal/proceedings/book)."""
+        if self.type in ["article"]:
+            return "journal"
+        if self.type in ["proceedings", "inproceedings", "incollection"]:
+            return "proceedings"
+        if self.type in ["book"]:
+            return "book"
 
     @property
     def authors(self) -> Iterator[RecordAuthor]:
         """Iterate over authors."""
-        for child in self.data:
-            if child.tag == "author":
-                yield RecordAuthor(child)
-
-    @property
-    def author_names(self) -> list[str]:
-        """Get list of author names."""
-        return [a.name for a in self.authors if a.name]
+        for author in self.data.findall("author"):
+            yield RecordAuthor(author)
 
     def __dict__(self) -> dict:
         """
         Convert to dictionary (excluding authors list).
 
         Returns:
-            Dict with record info (key, type, title, year, venue, doi, etc.)
+            Dict with record info (key, type, mdate, title, pages, year, month,
+            volume, series, booktitle, journal, number, ees, crossref, url,
+            stream, venue, venue_type)
         """
         result = {}
 
         if self.key:
-            result["dblp_key"] = self.key
+            result["key"] = self.key
         if self.type:
             result["type"] = self.type
         if self.mdate:
             result["mdate"] = self.mdate
         if self.title:
             result["title"] = self.title
+        if self.pages:
+            result["pages"] = self.pages
         if self.year:
             result["year"] = self.year
+        if self.month:
+            result["month"] = self.month
+        if self.volume:
+            result["volume"] = self.volume
+        if self.series:
+            result["series"] = self.series
+        if self.booktitle:
+            result["booktitle"] = self.booktitle
+        if self.journal:
+            result["journal"] = self.journal
+        if self.number:
+            result["number"] = self.number
+        if list(self.ees):
+            result["ees"] = list(self.ees)
+        if self.crossref:
+            result["crossref"] = self.crossref
+        if self.url:
+            result["url"] = self.url
+        if self.stream:
+            result["stream"] = self.stream
         if self.venue:
             result["venue"] = self.venue
         if self.venue_type:
             result["venue_type"] = self.venue_type
-        if self.doi:
-            result["doi"] = self.doi
-        if self.pages:
-            result["pages"] = self.pages
-        if self.volume:
-            result["volume"] = self.volume
-        if self.number:
-            result["number"] = self.number
 
         return result
 

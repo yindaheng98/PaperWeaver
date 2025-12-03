@@ -55,35 +55,35 @@ class PersonPageParser:
     @property
     def _person_element(self) -> ElementTree.Element | None:
         """Get the person element."""
-        for child in self.data:
-            if child.tag == "person":
-                return child
-        return None
+        for person in self.data.findall("person"):
+            return person
+
+    @property
+    def uname(self) -> str | None:
+        """Get username."""
+        person = self._person_element
+        if person is not None:
+            for note in person.findall("note[@type='uname']"):
+                if note.text:
+                    return note.text
 
     @property
     def affiliations(self) -> Iterator[str]:
         """Iterate over affiliations."""
         person = self._person_element
         if person is not None:
-            for note in person.findall("note"):
-                if note.attrib.get("type") == "affiliation" and note.text:
+            for note in person.findall("note[@type='affiliation']"):
+                if note.text:
                     yield note.text
-
-    @property
-    def uname(self) -> str | None:
-        person = self._person_element
-        if person is not None:
-            for note in person.findall("note"):
-                if note.attrib.get("type") == "uname" and note.text:
-                    return note.text
 
     @property
     def urls(self) -> Iterator[str]:
+        """Iterate over URLs."""
         person = self._person_element
         if person is not None:
-            for note in person.findall("url"):
-                if note.text:
-                    yield note.text
+            for url in person.findall("url"):
+                if url.text:
+                    yield url.text
 
     @property
     def publications(self) -> Iterator[RecordParser]:
@@ -93,31 +93,27 @@ class PersonPageParser:
         Each publication is a RecordParser with full author information
         including pid attributes.
         """
-        for child in self.data:
-            if child.tag == "r" and len(child) > 0:
-                yield RecordParser(child[0])
+        for r_elem in self.data.findall("r"):
+            if len(r_elem) > 0:
+                yield RecordParser(r_elem[0])
 
     def __dict__(self) -> dict:
         """
         Convert to dictionary (excluding publications list).
 
         Returns:
-            Dict with person info (pid, name, affiliations)
+            Dict with person info (pid, name, uname, affiliations, urls)
         """
         result = {}
 
         if self.pid:
             result["pid"] = self.pid
-
         if self.name:
             result["name"] = self.name
-
-        if list(self.affiliations):
-            result["affiliations"] = list(self.affiliations)
-
         if self.uname:
             result["uname"] = self.uname
-
+        if list(self.affiliations):
+            result["affiliations"] = list(self.affiliations)
         if list(self.urls):
             result["urls"] = list(self.urls)
 

@@ -178,40 +178,28 @@ class VenuePageParser:
 
         if self.key:
             result["key"] = self.key
-
         if self.title:
             result["title"] = self.title
-
         if self.href:
             result["href"] = self.href
-
         if self.ref:
             result["ref"] = self.ref
-
         if self.h2:
             result["h2"] = self.h2
-
         if self.h3:
             result["h3"] = self.h3
-
         if self.proceedings_title:
             result["proceedings_title"] = self.proceedings_title
-
         if self.proceedings_booktitle:
             result["proceedings_booktitle"] = self.proceedings_booktitle
-
         if self.proceedings_publisher:
             result["proceedings_publisher"] = self.proceedings_publisher
-
         if self.proceedings_isbn:
             result["proceedings_isbn"] = self.proceedings_isbn
-
         if self.proceedings_url:
             result["proceedings_url"] = self.proceedings_url
-
         if self.proceedings_year:
             result["proceedings_year"] = self.proceedings_year
-
         if list(self.proceedings_ees):
             result["proceedings_ees"] = list(self.proceedings_ees)
 
