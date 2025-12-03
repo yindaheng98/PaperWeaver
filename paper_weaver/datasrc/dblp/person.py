@@ -25,7 +25,7 @@ def author_to_dblp_pid(author: Author) -> str | None:
     return None
 
 
-def person_to_author(person: PersonPageParser) -> Author:
+def person_page_to_author(person: PersonPageParser) -> Author:
     """
     Convert PersonPageParser to Author with identifiers.
 
@@ -52,7 +52,7 @@ def person_to_author(person: PersonPageParser) -> Author:
     return Author(identifiers=identifiers)
 
 
-def person_to_info(person: PersonPageParser) -> dict:
+def person_page_to_info(person: PersonPageParser) -> dict:
     """
     Convert PersonPageParser to info dict.
 

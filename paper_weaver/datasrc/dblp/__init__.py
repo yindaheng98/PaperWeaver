@@ -6,9 +6,9 @@ Provides data source implementation for DBLP API.
 
 from .datasrc import DBLPDataSrc
 from .utils import fetch_xml
-from .person import author_to_dblp_pid, person_to_author, person_to_info
+from .person import author_to_dblp_pid, person_page_to_author, person_page_to_info
 from .record import paper_to_dblp_key, author_from_record_author, record_to_paper, record_to_info
-from .venue import venue_to_dblp_key, venue_key_from_paper, venue_to_venue, venue_to_info
+from .venue import venue_to_dblp_key, venue_key_from_paper, venue_page_to_venue, venue_page_to_info
 from .parser import RecordParser, RecordAuthor, RecordPageParser, PersonPageParser, VenuePageParser
 
 __all__ = [
@@ -17,8 +17,8 @@ __all__ = [
     "fetch_xml",
     # Person/Author
     "author_to_dblp_pid",
-    "person_to_author",
-    "person_to_info",
+    "person_page_to_author",
+    "person_page_to_info",
     "PersonPageParser",
     # Record/Paper
     "paper_to_dblp_key",
@@ -31,7 +31,7 @@ __all__ = [
     # Venue
     "venue_to_dblp_key",
     "venue_key_from_paper",
-    "venue_to_venue",
-    "venue_to_info",
+    "venue_page_to_venue",
+    "venue_page_to_info",
     "VenuePageParser",
 ]

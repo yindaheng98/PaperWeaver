@@ -16,8 +16,8 @@ from ...dataclass import DataSrc, Paper, Author, Venue
 
 from .parser import RecordPageParser, PersonPageParser, VenuePageParser
 from .record import paper_to_dblp_key, author_from_record_author, record_to_paper, record_to_info
-from .person import author_to_dblp_pid, person_to_author, person_to_info
-from .venue import venue_to_dblp_key, venue_key_from_paper, venue_to_venue, venue_to_info
+from .person import author_to_dblp_pid, person_page_to_author, person_page_to_info
+from .venue import venue_to_dblp_key, venue_key_from_paper, venue_page_to_venue, venue_page_to_info
 from .utils import fetch_xml
 
 
@@ -180,9 +180,9 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         """Get author information from DBLP."""
         person_page = await self._fetch_person_page(author)
 
-        updated_author = person_to_author(person_page)
+        updated_author = person_page_to_author(person_page)
         updated_author.identifiers.update(author.identifiers)
-        info = person_to_info(person_page)
+        info = person_page_to_info(person_page)
         return updated_author, info
 
     async def get_papers_by_author(self, author: Author) -> list[Paper]:
@@ -228,9 +228,9 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         """Get venue information from DBLP."""
         venue_page = await self._fetch_venue_page(venue)
 
-        updated_venue = venue_to_venue(venue_page)
+        updated_venue = venue_page_to_venue(venue_page)
         updated_venue.identifiers.update(venue.identifiers)
-        info = venue_to_info(venue_page)
+        info = venue_page_to_info(venue_page)
         return updated_venue, info
 
     async def get_papers_by_venue(self, venue: Venue) -> list[Paper]:

@@ -59,7 +59,7 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
     return None
 
 
-def venue_to_venue(parser: VenuePageParser) -> Venue:
+def venue_page_to_venue(parser: VenuePageParser) -> Venue:
     """
     Convert VenuePageParser to Venue with identifiers.
 
@@ -90,7 +90,7 @@ def venue_to_venue(parser: VenuePageParser) -> Venue:
     return Venue(identifiers=identifiers)
 
 
-def venue_to_info(parser: VenuePageParser) -> dict:
+def venue_page_to_info(parser: VenuePageParser) -> dict:
     """
     Convert VenuePageParser to info dict.
 
