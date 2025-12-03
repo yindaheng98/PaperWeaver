@@ -17,8 +17,7 @@ def add_cache_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cache-redis-prefix", default="pw", help="Redis key prefix (default: pw)")
 
     # Redis connection - 4 clients
-    parser.add_argument("--cache-redis-url", default="redis://localhost:6379",
-                        help="Default Redis URL for all storages")
+    parser.add_argument("--cache-redis-url", default="redis://localhost:6379", help="Default Redis URL for all storages")
     parser.add_argument("--cache-redis-reg-url", help="Redis URL for registry storage")
     parser.add_argument("--cache-redis-info-url", help="Redis URL for info storage")
     parser.add_argument("--cache-redis-committed-url", help="Redis URL for committed storage")
