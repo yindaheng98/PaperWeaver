@@ -1,11 +1,28 @@
 """
 DBLP Venue/Index page utilities.
 
-Provides functions to convert VenuePageParser to Venue and info dict.
+Provides functions to convert VenuePageParser to Venue and info dict,
+and extract DBLP identifiers from Venue objects.
 """
 
 from ...dataclass import Venue
 from .parser import VenuePageParser
+
+
+def venue_to_dblp_key(venue: Venue) -> str | None:
+    """
+    Extract DBLP venue key from Venue identifiers.
+
+    Args:
+        venue: Venue object with identifiers
+
+    Returns:
+        DBLP venue key (e.g., "conf/cvpr") or None if not found
+    """
+    for ident in venue.identifiers:
+        if ident.startswith("dblp-venue:"):
+            return ident[11:]  # Remove "dblp-venue:" prefix
+    return None
 
 
 def venue_to_venue(parser: VenuePageParser) -> Venue:
