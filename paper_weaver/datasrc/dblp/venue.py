@@ -20,8 +20,8 @@ def venue_to_dblp_key(venue: Venue) -> str | None:
         DBLP venue key (e.g., "conf/cvpr/cvpr2016") or None if not found
     """
     for ident in venue.identifiers:
-        if ident.startswith("venue:dblp:key:"):
-            return ident[15:]  # Remove "venue:dblp:key:" prefix
+        if ident.startswith("dblp:key:"):
+            return ident[9:]  # Remove "dblp:key:" prefix
     return None
 
 
@@ -29,7 +29,7 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
     """
     Extract venue key from paper URL.
 
-    Tries dblp:url from info first, then paper:dblp:url: from paper identifiers.
+    Tries dblp:url from info first, then dblp:url: from paper identifiers.
     URL format: db/conf/cvpr/cvpr2016.html#HeZRS16
     Returns: db/conf/cvpr/cvpr2016 (for fetching https://dblp.org/db/conf/cvpr/cvpr2016.xml)
     """
@@ -38,8 +38,8 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
     if dblp_url := info.get("dblp:url"):
         urls.append(dblp_url)
     for ident in paper.identifiers:
-        if ident.startswith("paper:dblp:url:"):
-            urls.append(ident[15:])
+        if ident.startswith("dblp:url:"):
+            urls.append(ident[9:])
 
     # Try each URL path (format: db/conf/cvpr/cvpr2016.html#HeZRS16)
     for url in urls:
@@ -61,26 +61,26 @@ def venue_page_to_venue(parser: VenuePageParser) -> Venue:
     """
     Convert VenuePageParser to Venue with identifiers.
 
-    Identifiers extracted (format: venue:{info_key}:{value}):
-    - venue:dblp:key:{key} - DBLP venue key (matches info["dblp:key"])
-    - venue:title:{title} - Venue title (matches info["title"])
-    - venue:proceedings_title:{proceedings_title} - Proceedings title (matches info["proceedings_title"])
-    - venue:proceedings_isbn:{isbn} - ISBN from proceedings (matches info["proceedings_isbn"])
+    Identifiers extracted:
+    - dblp:key:{key} - DBLP venue key (matches info["dblp:key"])
+    - title:{title} - Venue title (matches info["title"])
+    - proceedings_title:{proceedings_title} - Proceedings title (matches info["proceedings_title"])
+    - proceedings_isbn:{isbn} - ISBN from proceedings (matches info["proceedings_isbn"])
     - {ee} - All proceedings ee URLs as identifiers
     """
     identifiers = set()
 
     if parser.key:
-        identifiers.add(f"venue:dblp:key:{parser.key}")
+        identifiers.add(f"dblp:key:{parser.key}")
 
     if parser.title:
-        identifiers.add(f"venue:title:{parser.title}")
+        identifiers.add(f"title:{parser.title}")
 
     if parser.proceedings_title:
-        identifiers.add(f"venue:proceedings_title:{parser.proceedings_title}")
+        identifiers.add(f"proceedings_title:{parser.proceedings_title}")
 
     if parser.proceedings_isbn:
-        identifiers.add(f"venue:proceedings_isbn:{parser.proceedings_isbn}")
+        identifiers.add(f"proceedings_isbn:{parser.proceedings_isbn}")
 
     for ee in parser.proceedings_ees:
         identifiers.add(ee)

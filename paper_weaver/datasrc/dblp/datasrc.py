@@ -26,10 +26,10 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
     DataSrc implementation for DBLP API.
 
     Uses CachedAsyncPool for caching and concurrency control.
-    Identifiers use format {type}:{info_key}:{value} matching info dict keys:
-    - Paper: "paper:dblp:key:{key}", "paper:dblp:url:{url}"
-    - Author: "author:dblp:pid:{pid}", "author:dblp:name:{name}", "author:orcid:{orcid}"
-    - Venue: "venue:dblp:key:{key}", "venue:title:{title}", "venue:proceedings_title:{title}"
+    Identifiers use format {info_key}:{value} matching info dict keys:
+    - Paper: "dblp:key:{key}", "dblp:url:{url}"
+    - Author: "dblp:pid:{pid}", "dblp:name:{name}", "orcid:{orcid}"
+    - Venue: "dblp:key:{key}", "title:{title}", "proceedings_title:{title}"
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         """Get venues for a paper from DBLP."""
         updated_paper, info = await self.get_paper_info(paper)
 
-        # Extract venue key from dblp:url or paper:dblp:url: identifier
+        # Extract venue key from dblp:url identifier
         venue_key = venue_key_from_paper(updated_paper, info)
         if venue_key is None:
             raise ValueError("No valid DBLP venue key found for paper")

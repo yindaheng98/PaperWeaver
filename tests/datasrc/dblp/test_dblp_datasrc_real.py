@@ -102,7 +102,7 @@ class TestRealPaperAPI:
     @pytest.mark.asyncio
     async def test_get_paper_info(self, datasrc):
         """Test fetching real paper info."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             updated_paper, info = await datasrc.get_paper_info(paper)
@@ -116,9 +116,9 @@ class TestRealPaperAPI:
             # Verify identifiers are updated
             assert len(updated_paper.identifiers) > 0
             
-            # Check that paper:dblp:key identifier exists
+            # Check that dblp:key identifier exists
             has_dblp_key = any(
-                ident.startswith("paper:dblp:key:")
+                ident.startswith("dblp:key:")
                 for ident in updated_paper.identifiers
             )
             assert has_dblp_key
@@ -134,7 +134,7 @@ class TestRealPaperAPI:
     @pytest.mark.asyncio
     async def test_get_authors_by_paper(self, datasrc):
         """Test fetching real authors for a paper."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             authors = await datasrc.get_authors_by_paper(paper)
@@ -146,8 +146,8 @@ class TestRealPaperAPI:
             author_names = set()
             for author in authors:
                 for ident in author.identifiers:
-                    if ident.startswith("author:name:"):
-                        author_names.add(ident[12:])
+                    if ident.startswith("name:"):
+                        author_names.add(ident[5:])
             
             print(f"\n✓ Found {len(authors)} authors")
             print(f"  Author names: {author_names}")
@@ -160,7 +160,7 @@ class TestRealPaperAPI:
     @pytest.mark.asyncio
     async def test_get_venues_by_paper(self, datasrc):
         """Test fetching real venues for a paper."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             venues = await datasrc.get_venues_by_paper(paper)
@@ -177,7 +177,7 @@ class TestRealPaperAPI:
     @pytest.mark.asyncio
     async def test_get_references_by_paper_not_implemented(self, datasrc):
         """Test that get_references_by_paper raises NotImplementedError."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         with pytest.raises(NotImplementedError, match="DBLP API does not provide reference"):
             await datasrc.get_references_by_paper(paper)
@@ -187,7 +187,7 @@ class TestRealPaperAPI:
     @pytest.mark.asyncio
     async def test_get_citations_by_paper_not_implemented(self, datasrc):
         """Test that get_citations_by_paper raises NotImplementedError."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         with pytest.raises(NotImplementedError, match="DBLP API does not provide citation"):
             await datasrc.get_citations_by_paper(paper)
@@ -201,7 +201,7 @@ class TestRealAuthorAPI:
     @pytest.mark.asyncio
     async def test_get_author_info(self, datasrc):
         """Test fetching real author info."""
-        author = Author(identifiers={f"author:dblp:pid:{TEST_AUTHOR_PID}"})
+        author = Author(identifiers={f"dblp:pid:{TEST_AUTHOR_PID}"})
         
         try:
             updated_author, info = await datasrc.get_author_info(author)
@@ -214,9 +214,9 @@ class TestRealAuthorAPI:
             assert "name" in info
             assert info["name"] == TEST_AUTHOR_NAME
             
-            # Check that author:dblp:pid identifier exists
+            # Check that dblp:pid identifier exists
             has_dblp_pid = any(
-                ident.startswith("author:dblp:pid:")
+                ident.startswith("dblp:pid:")
                 for ident in updated_author.identifiers
             )
             assert has_dblp_pid
@@ -234,7 +234,7 @@ class TestRealAuthorAPI:
     @pytest.mark.asyncio
     async def test_get_papers_by_author(self, datasrc):
         """Test fetching real papers for an author."""
-        author = Author(identifiers={f"author:dblp:pid:{TEST_AUTHOR_PID}"})
+        author = Author(identifiers={f"dblp:pid:{TEST_AUTHOR_PID}"})
         
         try:
             papers = await datasrc.get_papers_by_author(author)
@@ -246,7 +246,7 @@ class TestRealAuthorAPI:
             resnet_found = False
             for paper in papers:
                 for ident in paper.identifiers:
-                    if ident == f"paper:dblp:key:{TEST_PAPER_KEY}":
+                    if ident == f"dblp:key:{TEST_PAPER_KEY}":
                         resnet_found = True
                         break
             
@@ -255,7 +255,7 @@ class TestRealAuthorAPI:
             # Print first 5 papers
             for i, p in enumerate(papers[:5]):
                 paper_key = next(
-                    (ident[15:] for ident in p.identifiers if ident.startswith("paper:dblp:key:")),
+                    (ident[9:] for ident in p.identifiers if ident.startswith("dblp:key:")),
                     "?"
                 )
                 print(f"  {i+1}. {paper_key}")
@@ -269,7 +269,7 @@ class TestRealVenueAPI:
     @pytest.mark.asyncio
     async def test_get_venue_info(self, datasrc):
         """Test fetching real venue info."""
-        venue = Venue(identifiers={f"venue:dblp:key:{TEST_VENUE_KEY}"})
+        venue = Venue(identifiers={f"dblp:key:{TEST_VENUE_KEY}"})
         
         try:
             updated_venue, info = await datasrc.get_venue_info(venue)
@@ -278,9 +278,9 @@ class TestRealVenueAPI:
             assert "dblp:key" in info
             assert info["dblp:key"] == TEST_VENUE_KEY
             
-            # Check that venue:dblp:key identifier exists
+            # Check that dblp:key identifier exists
             has_dblp_key = any(
-                ident.startswith("venue:dblp:key:")
+                ident.startswith("dblp:key:")
                 for ident in updated_venue.identifiers
             )
             assert has_dblp_key
@@ -300,7 +300,7 @@ class TestRealVenueAPI:
     @pytest.mark.asyncio
     async def test_get_papers_by_venue(self, datasrc):
         """Test fetching real papers for a venue."""
-        venue = Venue(identifiers={f"venue:dblp:key:{TEST_VENUE_KEY}"})
+        venue = Venue(identifiers={f"dblp:key:{TEST_VENUE_KEY}"})
         
         try:
             papers = await datasrc.get_papers_by_venue(venue)
@@ -312,7 +312,7 @@ class TestRealVenueAPI:
             resnet_found = False
             for paper in papers:
                 for ident in paper.identifiers:
-                    if ident == f"paper:dblp:key:{TEST_PAPER_KEY}":
+                    if ident == f"dblp:key:{TEST_PAPER_KEY}":
                         resnet_found = True
                         break
             
@@ -321,7 +321,7 @@ class TestRealVenueAPI:
             # Print first 5 papers
             for i, p in enumerate(papers[:5]):
                 paper_key = next(
-                    (ident[15:] for ident in p.identifiers if ident.startswith("paper:dblp:key:")),
+                    (ident[9:] for ident in p.identifiers if ident.startswith("dblp:key:")),
                     "?"
                 )
                 print(f"  {i+1}. {paper_key}")
@@ -337,7 +337,7 @@ class TestRealWorkflow:
         """Test getting an author's papers."""
         print("\n=== Author to Papers Workflow ===")
         
-        author = Author(identifiers={f"author:dblp:pid:{TEST_AUTHOR_PID}"})
+        author = Author(identifiers={f"dblp:pid:{TEST_AUTHOR_PID}"})
         
         try:
             # 1. Get author info
@@ -358,7 +358,7 @@ class TestRealWorkflow:
         """Test getting a paper's venue."""
         print("\n=== Paper to Venue Workflow ===")
         
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             # 1. Get paper info
@@ -370,7 +370,7 @@ class TestRealWorkflow:
             print(f"\n2. Venues: {len(venues)}")
             for venue in venues:
                 venue_key = next(
-                    (ident[15:] for ident in venue.identifiers if ident.startswith("venue:dblp:key:")),
+                    (ident[9:] for ident in venue.identifiers if ident.startswith("dblp:key:")),
                     "?"
                 )
                 print(f"   - {venue_key}")
@@ -385,7 +385,7 @@ class TestRealWorkflow:
         """Test getting a paper's authors."""
         print("\n=== Paper Authors Workflow ===")
         
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             # Get authors for paper
@@ -394,7 +394,7 @@ class TestRealWorkflow:
             
             for i, author in enumerate(authors[:5]):
                 author_name = next(
-                    (ident[12:] for ident in author.identifiers if ident.startswith("author:name:")),
+                    (ident[5:] for ident in author.identifiers if ident.startswith("name:")),
                     "?"
                 )
                 print(f"   - Author {i+1}: {author_name}")
@@ -409,7 +409,7 @@ class TestRealWorkflow:
         """Test getting papers from a venue."""
         print("\n=== Venue to Papers Workflow ===")
         
-        venue = Venue(identifiers={f"venue:dblp:key:{TEST_VENUE_KEY}"})
+        venue = Venue(identifiers={f"dblp:key:{TEST_VENUE_KEY}"})
         
         try:
             # 1. Get venue info
@@ -423,7 +423,7 @@ class TestRealWorkflow:
             # Print first 5 papers
             for i, p in enumerate(papers[:5]):
                 paper_key = next(
-                    (ident[15:] for ident in p.identifiers if ident.startswith("paper:dblp:key:")),
+                    (ident[9:] for ident in p.identifiers if ident.startswith("dblp:key:")),
                     "?"
                 )
                 print(f"   {i+1}. {paper_key}")
@@ -438,7 +438,7 @@ class TestRealWorkflow:
         """Test full paper exploration: paper -> authors, venue."""
         print("\n=== Full Paper Exploration Workflow ===")
         
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             # 1. Get paper info
@@ -452,7 +452,7 @@ class TestRealWorkflow:
             print(f"\n2. Authors ({len(authors)}):")
             for author in authors:
                 name = next(
-                    (ident[12:] for ident in author.identifiers if ident.startswith("author:name:")),
+                    (ident[5:] for ident in author.identifiers if ident.startswith("name:")),
                     "?"
                 )
                 print(f"   - {name}")
@@ -462,7 +462,7 @@ class TestRealWorkflow:
             print(f"\n3. Venue ({len(venues)}):")
             for venue in venues:
                 title = next(
-                    (ident[12:] for ident in venue.identifiers if ident.startswith("venue:title:")),
+                    (ident[6:] for ident in venue.identifiers if ident.startswith("title:")),
                     "?"
                 )
                 print(f"   - {title}")
@@ -480,7 +480,7 @@ class TestCacheIntegration:
     @pytest.mark.asyncio
     async def test_paper_info_cached(self, datasrc):
         """Test that paper info is cached after first fetch."""
-        paper = Paper(identifiers={f"paper:dblp:key:{TEST_PAPER_KEY}"})
+        paper = Paper(identifiers={f"dblp:key:{TEST_PAPER_KEY}"})
         
         try:
             # First fetch
@@ -501,7 +501,7 @@ class TestCacheIntegration:
     @pytest.mark.asyncio
     async def test_author_info_cached(self, datasrc):
         """Test that author info is cached after first fetch."""
-        author = Author(identifiers={f"author:dblp:pid:{TEST_AUTHOR_PID}"})
+        author = Author(identifiers={f"dblp:pid:{TEST_AUTHOR_PID}"})
         
         try:
             # First fetch
@@ -540,7 +540,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_paper_key(self, datasrc):
         """Test handling of invalid paper key."""
-        paper = Paper(identifiers={f"paper:dblp:key:invalid/nonexistent/key"})
+        paper = Paper(identifiers={f"dblp:key:invalid/nonexistent/key"})
         
         with pytest.raises(ValueError, match="Failed to fetch"):
             await datasrc.get_paper_info(paper)
@@ -560,7 +560,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_author_pid(self, datasrc):
         """Test handling of invalid author PID."""
-        author = Author(identifiers={f"author:dblp:pid:invalid/nonexistent"})
+        author = Author(identifiers={f"dblp:pid:invalid/nonexistent"})
         
         with pytest.raises(ValueError, match="Failed to fetch"):
             await datasrc.get_author_info(author)
@@ -570,7 +570,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_missing_author_identifier(self, datasrc):
         """Test handling of author without DBLP identifier."""
-        author = Author(identifiers={"author:name:Unknown Author"})
+        author = Author(identifiers={"name:Unknown Author"})
         
         with pytest.raises(ValueError, match="No valid DBLP identifier"):
             await datasrc.get_author_info(author)
@@ -580,7 +580,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_venue_key(self, datasrc):
         """Test handling of invalid venue key."""
-        venue = Venue(identifiers={f"venue:dblp:key:invalid/nonexistent"})
+        venue = Venue(identifiers={f"dblp:key:invalid/nonexistent"})
         
         with pytest.raises(ValueError, match="Failed to fetch"):
             await datasrc.get_venue_info(venue)
@@ -590,7 +590,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_missing_venue_identifier(self, datasrc):
         """Test handling of venue without DBLP identifier."""
-        venue = Venue(identifiers={"venue:title:Unknown Venue"})
+        venue = Venue(identifiers={"title:Unknown Venue"})
         
         with pytest.raises(ValueError, match="No valid DBLP identifier"):
             await datasrc.get_venue_info(venue)
