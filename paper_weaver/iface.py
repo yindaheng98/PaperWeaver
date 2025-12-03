@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Tuple, AsyncIterator
-from .dataclass import Paper, Author, DataSrc, DataDst
+from .dataclass import Paper, Author, Venue, DataSrc, DataDst
 
 
 class WeaverCacheIface(metaclass=ABCMeta):
@@ -21,6 +21,15 @@ class WeaverCacheIface(metaclass=ABCMeta):
 
     @abstractmethod
     async def set_paper_info(self, paper: Paper, info: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_venue_info(self, venue: Venue) -> Tuple[Venue, dict | None]:
+        """return (updated venue, info or None if not in cache)"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_venue_info(self, venue: Venue, info: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
