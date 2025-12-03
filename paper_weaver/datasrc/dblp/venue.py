@@ -17,7 +17,7 @@ def venue_to_dblp_key(venue: Venue) -> str | None:
         venue: Venue object with identifiers
 
     Returns:
-        DBLP venue key (e.g., "conf/cvpr") or None if not found
+        DBLP venue key (e.g., "conf/cvpr/cvpr2016") or None if not found
     """
     for ident in venue.identifiers:
         if ident.startswith("dblp-venue:"):
@@ -30,43 +30,32 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
     Extract venue key from paper URL.
 
     Tries dblp:url from info first, then dblp-url: from paper identifiers.
-    URL format: https://dblp.org/rec/{type}/{venue}/{paper_id}
-    Returns: {type}/{venue} (e.g., "conf/cvpr")
+    URL format: db/conf/cvpr/cvpr2016.html#HeZRS16
+    Returns: conf/cvpr/cvpr2016 (for fetching https://dblp.org/db/conf/cvpr/cvpr2016.xml)
     """
-    # Try dblp:url from info first
-    dblp_url = info.get("dblp:url")
-    venue_key = _venue_key_from_url(dblp_url)
-    if venue_key:
-        return venue_key
-
-    # Try dblp-url: from identifiers
+    # Collect candidate URLs
+    urls = []
+    if dblp_url := info.get("dblp:url"):
+        urls.append(dblp_url)
     for ident in paper.identifiers:
         if ident.startswith("dblp-url:"):
-            venue_key = _venue_key_from_url(ident[9:])
-            if venue_key:
-                return venue_key
+            urls.append(ident[9:])
 
-    return None
+    # Try each URL path (format: db/conf/cvpr/cvpr2016.html#HeZRS16)
+    for url in urls:
+        # Remove fragment (#HeZRS16)
+        path = url.split("#")[0]
+        # Must start with "db/"
+        if not path.startswith("db/"):
+            continue
+        # Remove "db/" prefix
+        path = path[3:]
+        # Remove .html extension
+        if path.endswith(".html"):
+            path = path[:-5]
+        if path:
+            return path
 
-
-def _venue_key_from_url(url: str | None) -> str | None:
-    """
-    Extract venue key from DBLP URL.
-
-    e.g., "https://dblp.org/rec/conf/cvpr/HeZRS16" -> "conf/cvpr"
-    """
-    if not url:
-        return None
-
-    prefix = "https://dblp.org/rec/"
-    if not url.startswith(prefix):
-        return None
-
-    # path: "conf/cvpr/HeZRS16" -> ["conf", "cvpr", "HeZRS16"]
-    path = url[len(prefix):]
-    parts = path.split("/")
-    if len(parts) >= 3:
-        return f"{parts[0]}/{parts[1]}"
     return None
 
 
