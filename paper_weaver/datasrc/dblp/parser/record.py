@@ -43,25 +43,18 @@ class RecordAuthor:
         """Get DBLP person ID (only available from person pages)."""
         return self.data.attrib.get("pid")
 
-    @property
-    def orcid(self) -> str | None:
-        """Get ORCID identifier."""
-        return self.data.attrib.get("orcid")
-
     def __dict__(self) -> dict:
         """
         Convert to dictionary.
 
         Returns:
-            Dict with author info (name, pid, orcid)
+            Dict with author info (name, pid)
         """
         result = {}
         if self.name:
             result["name"] = self.name
         if self.pid:
             result["pid"] = self.pid
-        if self.orcid:
-            result["orcid"] = self.orcid
         return result
 
     def __repr__(self) -> str:

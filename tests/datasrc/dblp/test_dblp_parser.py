@@ -399,27 +399,25 @@ class TestRecordAuthor:
     def test_record_author_from_element(self):
         """Test RecordAuthor from XML element."""
         import xml.etree.ElementTree as ET
-        elem = ET.fromstring('<author pid="34/7659" orcid="0000-0001-1234-5678">Kaiming He</author>')
+        elem = ET.fromstring('<author pid="34/7659">Kaiming He</author>')
         
         author = RecordAuthor(elem)
         
         assert author.name == "Kaiming He"
         assert author.pid == "34/7659"
-        assert author.orcid == "0000-0001-1234-5678"
         
         print(f"\n✓ RecordAuthor: {author}")
     
     def test_record_author_to_dict(self):
         """Test RecordAuthor.__dict__ method."""
         import xml.etree.ElementTree as ET
-        elem = ET.fromstring('<author pid="34/7659" orcid="0000-0001-1234-5678">Kaiming He</author>')
+        elem = ET.fromstring('<author pid="34/7659">Kaiming He</author>')
         
         author = RecordAuthor(elem)
         d = author.__dict__()
         
         assert d["name"] == "Kaiming He"
         assert d["pid"] == "34/7659"
-        assert d["orcid"] == "0000-0001-1234-5678"
         
         # Without optional fields
         elem2 = ET.fromstring('<author>Unknown Author</author>')
@@ -427,7 +425,6 @@ class TestRecordAuthor:
         d2 = author2.__dict__()
         assert d2["name"] == "Unknown Author"
         assert "pid" not in d2
-        assert "orcid" not in d2
         
         print(f"\n✓ __dict__(): {d}")
 
