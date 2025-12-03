@@ -2,12 +2,12 @@
 Integration tests simulating upper layer workflows.
 
 Tests the cache implementation against the expected behavior
-from iface_a2p.py, iface_p2a.py, iface_p2r.py, iface_p2c.py.
+from iface_a2p.py, iface_p2a.py, iface_p2r.py, iface_p2c.py, iface_p2v.py.
 """
 
 import pytest
 
-from paper_weaver.dataclass import Paper, Author
+from paper_weaver.dataclass import Paper, Author, Venue
 from paper_weaver.cache import (
     create_memory_author_weaver_cache,
     create_memory_paper_weaver_cache,
@@ -203,3 +203,67 @@ class TestIntegrationPaper2CitationsWorkflow:
             await cache.set_paper_info(cit, {"title": "Citation"})
             await cache.commit_citation_link(paper, cit)
             assert await cache.is_citation_link_committed(paper, cit) is True
+
+
+class TestIntegrationPaper2VenuesWorkflow:
+    """
+    Integration tests simulating the Paper2VenuesWeaverIface workflow.
+    """
+
+    @pytest.fixture
+    def cache(self):
+        return create_memory_paper_weaver_cache()
+
+    @pytest.mark.asyncio
+    async def test_complete_paper_to_venues_cycle(self, cache):
+        """Test complete paper -> venues workflow."""
+        paper = Paper(identifiers={"doi:123"})
+
+        # Set paper info
+        await cache.set_paper_info(paper, {"title": "Main Paper"})
+
+        # Add pending venues
+        venues = [
+            Venue(identifiers={"issn:1234-5678"}),
+            Venue(identifiers={"issn:8765-4321"}),
+        ]
+        await cache.add_pending_venues_for_paper(paper, venues)
+
+        # Get and process venues
+        vens = await cache.get_pending_venues_for_paper(paper)
+        for venue in vens:
+            await cache.set_venue_info(venue, {"name": "Test Venue"})
+            await cache.commit_venue_link(paper, venue)
+            assert await cache.is_venue_link_committed(paper, venue) is True
+
+    @pytest.mark.asyncio
+    async def test_venue_info_persistence(self, cache):
+        """Test that venue info persists correctly."""
+        venue = Venue(identifiers={"issn:1234-5678"})
+
+        # Get venue info (None initially)
+        venue, info = await cache.get_venue_info(venue)
+        assert info is None
+
+        # Set venue info
+        venue_info = {"name": "ICML", "year": 2024, "type": "conference"}
+        await cache.set_venue_info(venue, venue_info)
+
+        # Verify info persists
+        venue, info = await cache.get_venue_info(venue)
+        assert info == venue_info
+
+    @pytest.mark.asyncio
+    async def test_venue_identifier_merging(self, cache):
+        """Test that venue identifiers are properly merged."""
+        # Add venue with one identifier
+        venue1 = Venue(identifiers={"issn:1234-5678"})
+        await cache.set_venue_info(venue1, {"name": "Venue 1"})
+
+        # Query with additional identifier
+        venue2 = Venue(identifiers={"issn:1234-5678", "dblp:conf/icml"})
+        venue2, info = await cache.get_venue_info(venue2)
+
+        # Should have merged identifiers
+        assert "issn:1234-5678" in venue2.identifiers
+        assert "dblp:conf/icml" in venue2.identifiers

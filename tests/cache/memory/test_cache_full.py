@@ -6,7 +6,7 @@ Tests: FullAuthorWeaverCache, FullPaperWeaverCache
 
 import pytest
 
-from paper_weaver.dataclass import Paper, Author
+from paper_weaver.dataclass import Paper, Author, Venue
 from paper_weaver.cache import (
     create_memory_author_weaver_cache,
     create_memory_paper_weaver_cache,
@@ -145,3 +145,27 @@ class TestFullPaperWeaverCache:
         # Verify links committed
         for cit in citations:
             assert await cache.is_citation_link_committed(paper, cit) is True
+
+    @pytest.mark.asyncio
+    async def test_paper_to_venues_workflow(self, cache):
+        """Test full paper -> venues workflow."""
+        paper = Paper(identifiers={"doi:123"})
+        venues = [
+            Venue(identifiers={"issn:1234-5678"}),
+            Venue(identifiers={"issn:8765-4321"}),
+        ]
+
+        # Add pending venues
+        await cache.add_pending_venues_for_paper(paper, venues)
+
+        # Get pending venues
+        result = await cache.get_pending_venues_for_paper(paper)
+        assert len(result) == 2
+
+        # Commit links
+        for venue in venues:
+            await cache.commit_venue_link(paper, venue)
+
+        # Verify links committed
+        for venue in venues:
+            assert await cache.is_venue_link_committed(paper, venue) is True

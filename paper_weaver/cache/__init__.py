@@ -82,6 +82,7 @@ from .impl import (  # noqa: F401
 from .impl_link import (  # noqa: F401
     AuthorLinkCache,
     PaperLinkCache,
+    VenueLinkCache,
 )
 from .impl_a2p import (  # noqa: F401
     Author2PapersCache,
@@ -94,6 +95,9 @@ from .impl_p2r import (  # noqa: F401
 )
 from .impl_p2c import (  # noqa: F401
     Paper2CitationsCache,
+)
+from .impl_p2v import (  # noqa: F401
+    Paper2VenuesCache,
 )
 
 # Factory functions
@@ -128,10 +132,12 @@ __all__ = [
     "ComposableCacheBase",
     "AuthorLinkCache",
     "PaperLinkCache",
+    "VenueLinkCache",
     "Author2PapersCache",
     "Paper2AuthorsCache",
     "Paper2ReferencesCache",
     "Paper2CitationsCache",
+    "Paper2VenuesCache",
     "FullAuthorWeaverCache",
     "FullPaperWeaverCache",
     # Factory

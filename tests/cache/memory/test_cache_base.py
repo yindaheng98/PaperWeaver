@@ -4,7 +4,7 @@ Unit tests for ComposableCacheBase.
 
 import pytest
 
-from paper_weaver.dataclass import Paper, Author
+from paper_weaver.dataclass import Paper, Author, Venue
 from paper_weaver.cache import (
     MemoryIdentifierRegistry,
     MemoryInfoStorage,
@@ -22,6 +22,8 @@ class TestComposableCacheBase:
             paper_info_storage=MemoryInfoStorage(),
             author_registry=MemoryIdentifierRegistry(),
             author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
         )
 
     @pytest.mark.asyncio
@@ -103,3 +105,50 @@ class TestComposableCacheBase:
             authors.append(author)
 
         assert len(authors) == 2
+
+    @pytest.mark.asyncio
+    async def test_get_venue_info_not_set(self, cache):
+        """Test getting venue info that hasn't been set."""
+        venue = Venue(identifiers={"issn:1234-5678"})
+        venue, info = await cache.get_venue_info(venue)
+        assert info is None
+
+    @pytest.mark.asyncio
+    async def test_set_and_get_venue_info(self, cache):
+        """Test setting and getting venue info."""
+        venue = Venue(identifiers={"issn:1234-5678"})
+        info = {"name": "Test Conference", "year": 2024}
+
+        await cache.set_venue_info(venue, info)
+        venue, retrieved_info = await cache.get_venue_info(venue)
+
+        assert retrieved_info == info
+
+    @pytest.mark.asyncio
+    async def test_venue_identifiers_merge_on_set(self, cache):
+        """Test that venue identifiers are merged when setting info."""
+        venue = Venue(identifiers={"issn:1234-5678", "dblp:conf/venue"})
+        await cache.set_venue_info(venue, {"name": "Test"})
+
+        # Query with partial identifiers
+        venue2 = Venue(identifiers={"issn:1234-5678"})
+        venue2, info = await cache.get_venue_info(venue2)
+
+        # Should have all identifiers
+        assert "issn:1234-5678" in venue2.identifiers
+        assert "dblp:conf/venue" in venue2.identifiers
+
+    @pytest.mark.asyncio
+    async def test_iterate_venues(self, cache):
+        """Test iterating over registered venues."""
+        venue1 = Venue(identifiers={"issn:1111"})
+        venue2 = Venue(identifiers={"issn:2222"})
+
+        await cache.set_venue_info(venue1, {"name": "Venue 1"})
+        await cache.set_venue_info(venue2, {"name": "Venue 2"})
+
+        venues = []
+        async for venue in cache.iterate_venues():
+            venues.append(venue)
+
+        assert len(venues) == 2

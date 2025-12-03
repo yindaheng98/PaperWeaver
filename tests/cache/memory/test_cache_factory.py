@@ -94,3 +94,14 @@ class TestHybridCacheBuilder:
         await cache.set_paper_info(paper, {"title": "Test"})
         paper, info = await cache.get_paper_info(paper)
         assert info["title"] == "Test"
+
+    @pytest.mark.asyncio
+    async def test_build_paper2venues_cache(self):
+        """Test building Paper2VenuesCache."""
+        builder = HybridCacheBuilder().with_all_memory()
+        cache = builder.build_paper2venues_cache()
+
+        paper = Paper(identifiers={"doi:123"})
+        await cache.set_paper_info(paper, {"title": "Test"})
+        paper, info = await cache.get_paper_info(paper)
+        assert info["title"] == "Test"

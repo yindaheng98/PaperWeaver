@@ -1,18 +1,19 @@
 """
 Unit tests for link cache classes.
 
-Tests: AuthorLinkCache, PaperLinkCache
+Tests: AuthorLinkCache, PaperLinkCache, VenueLinkCache
 """
 
 import pytest
 
-from paper_weaver.dataclass import Paper, Author
+from paper_weaver.dataclass import Paper, Author, Venue
 from paper_weaver.cache import (
     MemoryIdentifierRegistry,
     MemoryInfoStorage,
     MemoryCommittedLinkStorage,
     AuthorLinkCache,
     PaperLinkCache,
+    VenueLinkCache,
 )
 
 
@@ -26,6 +27,8 @@ class TestAuthorLinkCache:
             paper_info_storage=MemoryInfoStorage(),
             author_registry=MemoryIdentifierRegistry(),
             author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
             committed_author_links=MemoryCommittedLinkStorage(),
         )
 
@@ -75,6 +78,8 @@ class TestPaperLinkCache:
             paper_info_storage=MemoryInfoStorage(),
             author_registry=MemoryIdentifierRegistry(),
             author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
             committed_reference_links=MemoryCommittedLinkStorage(),
         )
 
@@ -111,3 +116,54 @@ class TestPaperLinkCache:
         assert await cache.is_citation_link_committed(paper, citation) is True
         # Internally: citation references paper
         assert await cache.is_reference_link_committed(citation, paper) is True
+
+
+class TestVenueLinkCache:
+    """Tests for VenueLinkCache."""
+
+    @pytest.fixture
+    def cache(self):
+        return VenueLinkCache(
+            paper_registry=MemoryIdentifierRegistry(),
+            paper_info_storage=MemoryInfoStorage(),
+            author_registry=MemoryIdentifierRegistry(),
+            author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
+            committed_venue_links=MemoryCommittedLinkStorage(),
+        )
+
+    @pytest.mark.asyncio
+    async def test_is_venue_link_committed_not_set(self, cache):
+        """Test checking uncommitted venue link."""
+        paper = Paper(identifiers={"doi:123"})
+        venue = Venue(identifiers={"issn:1234-5678"})
+
+        result = await cache.is_venue_link_committed(paper, venue)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_commit_and_check_venue_link(self, cache):
+        """Test committing and checking venue link."""
+        paper = Paper(identifiers={"doi:123"})
+        venue = Venue(identifiers={"issn:1234-5678"})
+
+        await cache.commit_venue_link(paper, venue)
+        result = await cache.is_venue_link_committed(paper, venue)
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_link_works_with_merged_identifiers(self, cache):
+        """Test that link checking works with merged identifiers."""
+        paper = Paper(identifiers={"doi:123"})
+        venue = Venue(identifiers={"issn:1234-5678"})
+
+        await cache.commit_venue_link(paper, venue)
+
+        # Check with additional identifiers
+        paper2 = Paper(identifiers={"doi:123", "arxiv:456"})
+        venue2 = Venue(identifiers={"issn:1234-5678", "dblp:conf/venue"})
+
+        result = await cache.is_venue_link_committed(paper2, venue2)
+        assert result is True

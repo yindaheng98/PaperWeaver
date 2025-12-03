@@ -24,6 +24,8 @@ class TestPaper2ReferencesCache:
             paper_info_storage=MemoryInfoStorage(),
             author_registry=MemoryIdentifierRegistry(),
             author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
             committed_reference_links=MemoryCommittedLinkStorage(),
             pending_references=MemoryPendingListStorage(),
         )

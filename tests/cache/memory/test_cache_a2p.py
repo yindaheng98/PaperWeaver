@@ -24,6 +24,8 @@ class TestAuthor2PapersCache:
             paper_info_storage=MemoryInfoStorage(),
             author_registry=MemoryIdentifierRegistry(),
             author_info_storage=MemoryInfoStorage(),
+            venue_registry=MemoryIdentifierRegistry(),
+            venue_info_storage=MemoryInfoStorage(),
             committed_author_links=MemoryCommittedLinkStorage(),
             pending_papers=MemoryPendingListStorage(),
         )

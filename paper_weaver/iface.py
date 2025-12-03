@@ -42,6 +42,11 @@ class WeaverCacheIface(metaclass=ABCMeta):
         """Iterate over all registered papers."""
         raise NotImplementedError
 
+    @abstractmethod
+    def iterate_venues(self) -> AsyncIterator[Venue]:
+        """Iterate over all registered venues."""
+        raise NotImplementedError
+
 
 class WeaverIface(metaclass=ABCMeta):
 

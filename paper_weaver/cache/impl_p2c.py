@@ -32,12 +32,15 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
         paper_info_storage: InfoStorageIface,
         author_registry: IdentifierRegistryIface,
         author_info_storage: InfoStorageIface,
+        venue_registry: IdentifierRegistryIface,
+        venue_info_storage: InfoStorageIface,
         committed_reference_links: CommittedLinkStorageIface,
         pending_citations: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
             author_registry, author_info_storage,
+            venue_registry, venue_info_storage,
             committed_reference_links
         )
         self._pending_citations_manager = PendingListManager(
