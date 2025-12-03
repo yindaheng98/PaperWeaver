@@ -1,0 +1,86 @@
+"""
+DBLP Venue/Index page utilities.
+
+Provides functions to convert VenuePageParser to Venue and info dict.
+"""
+
+from ...dataclass import Venue
+from .parser import VenuePageParser
+
+
+def venue_to_venue(parser: VenuePageParser) -> Venue:
+    """
+    Convert VenuePageParser to Venue with identifiers.
+
+    Identifiers extracted:
+    - dblp-venue:{key} - DBLP venue key
+    - dblp-venue-title:{title} - Venue title
+    - dblp-venue-proceedings-title:{proceedings_title} - Proceedings title
+    - isbn:{isbn} - ISBN from proceedings
+    - {ee} - All proceedings ee URLs as identifiers
+    """
+    identifiers = set()
+
+    if parser.key:
+        identifiers.add(f"dblp-venue:{parser.key}")
+
+    if parser.title:
+        identifiers.add(f"dblp-venue-title:{parser.title}")
+
+    if parser.proceedings_title:
+        identifiers.add(f"dblp-venue-proceedings-title:{parser.proceedings_title}")
+
+    if parser.proceedings_isbn:
+        identifiers.add(f"isbn:{parser.proceedings_isbn}")
+
+    for ee in parser.proceedings_ees:
+        identifiers.add(ee)
+
+    return Venue(identifiers=identifiers)
+
+
+def venue_to_info(parser: VenuePageParser) -> dict:
+    """
+    Convert VenuePageParser to info dict.
+
+    Keys with "dblp:" prefix (to avoid conflicts):
+    - dblp:key, dblp:href, dblp:ref, dblp:h2, dblp:h3, dblp:proceedings_url
+
+    Common keys (unlikely to conflict):
+    - title, proceedings_title, proceedings_booktitle, proceedings_publisher,
+      proceedings_isbn, proceedings_year, proceedings_ees
+    """
+    info = {}
+
+    # Keys with dblp: prefix
+    if parser.key:
+        info["dblp:key"] = parser.key
+    if parser.href:
+        info["dblp:href"] = parser.href
+    if parser.ref:
+        info["dblp:ref"] = parser.ref
+    if parser.h2:
+        info["dblp:h2"] = parser.h2
+    if parser.h3:
+        info["dblp:h3"] = parser.h3
+    if parser.proceedings_url:
+        info["dblp:proceedings_url"] = parser.proceedings_url
+
+    # Common keys
+    if parser.title:
+        info["title"] = parser.title
+    if parser.proceedings_title:
+        info["proceedings_title"] = parser.proceedings_title
+    if parser.proceedings_booktitle:
+        info["proceedings_booktitle"] = parser.proceedings_booktitle
+    if parser.proceedings_publisher:
+        info["proceedings_publisher"] = parser.proceedings_publisher
+    if parser.proceedings_isbn:
+        info["proceedings_isbn"] = parser.proceedings_isbn
+    if parser.proceedings_year:
+        info["proceedings_year"] = parser.proceedings_year
+    ees = list(parser.proceedings_ees)
+    if ees:
+        info["urls"] = ees
+
+    return info
