@@ -86,6 +86,13 @@ class PersonPageParser:
                     yield url.text
 
     @property
+    def orcid(self) -> str | None:
+        """Get ORCID."""
+        for url in self.urls:
+            if url.startswith("https://orcid.org/"):
+                return url[19:]  # Remove prefix
+
+    @property
     def publications(self) -> Iterator[RecordParser]:
         """
         Iterate over publications.
@@ -96,28 +103,3 @@ class PersonPageParser:
         for r_elem in self.data.findall("r"):
             if len(r_elem) > 0:
                 yield RecordParser(r_elem[0])
-
-    def __dict__(self) -> dict:
-        """
-        Convert to dictionary (excluding publications list).
-
-        Returns:
-            Dict with person info (pid, name, uname, affiliations, urls)
-        """
-        result = {}
-
-        if self.pid:
-            result["pid"] = self.pid
-        if self.name:
-            result["name"] = self.name
-        if self.uname:
-            result["uname"] = self.uname
-        if list(self.affiliations):
-            result["affiliations"] = list(self.affiliations)
-        if list(self.urls):
-            result["urls"] = list(self.urls)
-
-        return result
-
-    def __repr__(self) -> str:
-        return f"PersonPageParser(pid={self.pid!r}, name={self.name!r})"

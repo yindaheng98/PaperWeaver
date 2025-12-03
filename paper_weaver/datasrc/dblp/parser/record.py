@@ -43,6 +43,11 @@ class RecordAuthor:
         """Get DBLP person ID (only available from person pages)."""
         return self.data.attrib.get("pid")
 
+    @property
+    def orcid(self) -> str | None:
+        """Get ORCID (if available)."""
+        return self.data.attrib.get("orcid")
+
     def __dict__(self) -> dict:
         """
         Convert to dictionary.
@@ -55,6 +60,8 @@ class RecordAuthor:
             result["name"] = self.name
         if self.pid:
             result["pid"] = self.pid
+        if self.orcid:
+            result["orcid"] = self.orcid
         return result
 
     def __repr__(self) -> str:
@@ -217,59 +224,6 @@ class RecordParser:
         """Iterate over authors."""
         for author in self.data.findall("author"):
             yield RecordAuthor(author)
-
-    def __dict__(self) -> dict:
-        """
-        Convert to dictionary (excluding authors list).
-
-        Returns:
-            Dict with record info (key, type, mdate, title, pages, year, month,
-            volume, series, booktitle, journal, number, ees, crossref, url,
-            stream, venue, venue_type)
-        """
-        result = {}
-
-        if self.key:
-            result["key"] = self.key
-        if self.type:
-            result["type"] = self.type
-        if self.mdate:
-            result["mdate"] = self.mdate
-        if self.title:
-            result["title"] = self.title
-        if self.pages:
-            result["pages"] = self.pages
-        if self.year:
-            result["year"] = self.year
-        if self.month:
-            result["month"] = self.month
-        if self.volume:
-            result["volume"] = self.volume
-        if self.series:
-            result["series"] = self.series
-        if self.booktitle:
-            result["booktitle"] = self.booktitle
-        if self.journal:
-            result["journal"] = self.journal
-        if self.number:
-            result["number"] = self.number
-        if list(self.ees):
-            result["ees"] = list(self.ees)
-        if self.crossref:
-            result["crossref"] = self.crossref
-        if self.url:
-            result["url"] = self.url
-        if self.stream:
-            result["stream"] = self.stream
-        if self.venue:
-            result["venue"] = self.venue
-        if self.venue_type:
-            result["venue_type"] = self.venue_type
-
-        return result
-
-    def __repr__(self) -> str:
-        return f"RecordParser(key={self.key!r}, title={self.title!r})"
 
 
 class RecordPageParser(RecordParser):
