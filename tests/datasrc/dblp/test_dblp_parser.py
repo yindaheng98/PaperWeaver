@@ -11,8 +11,8 @@ Run with: pytest tests/datasrc/dblp/test_dblp_parser.py -v -s
 
 import pytest
 import pytest_asyncio
-import aiohttp
 
+from paper_weaver.datasrc.dblp import fetch_xml
 from paper_weaver.datasrc.dblp.parser import (
     RecordParser,
     RecordPageParser,
@@ -31,19 +31,6 @@ VENUE_PAGE_URL = "https://dblp.org/db/conf/cvpr/cvpr2016.xml"  # CVPR 2016
 RECORD_KEY = "conf/cvpr/HeZRS16"
 PERSON_PID = "34/7659"
 PERSON_NAME = "Kaiming He"
-
-
-async def fetch_xml(url: str) -> str | None:
-    """Fetch XML from URL."""
-    try:
-        connector = aiohttp.TCPConnector(ssl=False)
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                if response.status == 200:
-                    return await response.text()
-    except Exception:
-        pass
-    return None
 
 
 @pytest_asyncio.fixture
@@ -94,9 +81,12 @@ class TestRecordPageParser:
         # Year should be 2016
         assert result.year == 2016
         
-        # Venue should be CVPR
+        # Venue should be CVPR (from booktitle for inproceedings)
         assert result.venue is not None
         assert "CVPR" in result.venue
+        
+        # Check venue_type
+        assert result.venue_type == "proceedings"
         
         print(f"\n✓ Parsed record page:")
         print(f"  Key: {result.key}")
@@ -104,6 +94,7 @@ class TestRecordPageParser:
         print(f"  Year: {result.year}")
         print(f"  Venue: {result.venue}")
         print(f"  Type: {result.type}")
+        print(f"  Venue Type: {result.venue_type}")
     
     @pytest.mark.asyncio
     async def test_record_page_parser_authors(self, record_page_xml):
@@ -130,25 +121,29 @@ class TestRecordPageParser:
             print(f"  - {author.name} (pid={author.pid})")
     
     @pytest.mark.asyncio
-    async def test_record_page_parser_dict(self, record_page_xml):
-        """Test __dict__ method excludes authors."""
+    async def test_record_page_parser_ees(self, record_page_xml):
+        """Test ee (electronic edition) URLs extraction."""
         result = RecordPageParser(record_page_xml)
         
-        info = result.__dict__()
+        ees = list(result.ees)
         
-        # Should have basic info
-        assert "key" in info
-        assert info["key"] == RECORD_KEY
-        assert "title" in info
-        assert "year" in info
-        assert info["year"] == 2016
+        # ResNet paper should have ee URLs
+        assert len(ees) > 0
         
-        # Should NOT have authors
-        assert "authors" not in info
+        print(f"\n✓ EE URLs ({len(ees)}):")
+        for ee in ees:
+            print(f"  - {ee}")
+    
+    @pytest.mark.asyncio
+    async def test_record_page_parser_url(self, record_page_xml):
+        """Test DBLP URL extraction."""
+        result = RecordPageParser(record_page_xml)
         
-        print(f"\n✓ __dict__() output:")
-        for k, v in info.items():
-            print(f"  {k}: {v}")
+        # Should have a DBLP URL
+        assert result.url is not None
+        assert "dblp.org" in result.url or result.url.startswith("db/")
+        
+        print(f"\n✓ DBLP URL: {result.url}")
     
     def test_invalid_record_page(self):
         """Test parsing invalid XML."""
@@ -176,6 +171,8 @@ class TestRecordParser:
                 <title>Test Title</title>
                 <year>2023</year>
                 <booktitle>Test Conference</booktitle>
+                <ee>https://doi.org/10.1000/test</ee>
+                <url>db/conf/test/test2023.html#Test23</url>
             </inproceedings>
         ''')
         
@@ -186,12 +183,49 @@ class TestRecordParser:
         assert parser.title == "Test Title"
         assert parser.year == 2023
         assert parser.venue == "Test Conference"
+        assert parser.venue_type == "proceedings"
+        assert parser.mdate == "2023-01-01"
+        
+        # Check ees
+        ees = list(parser.ees)
+        assert len(ees) == 1
+        assert "doi.org" in ees[0]
+        
+        # Check url
+        assert parser.url is not None
         
         authors = list(parser.authors)
         assert len(authors) == 1
         assert authors[0].name == "Test Author"
         
-        print(f"\n✓ RecordParser from element: {parser}")
+        print(f"\n✓ RecordParser from element: key={parser.key}, venue={parser.venue}")
+    
+    def test_record_parser_article(self):
+        """Test RecordParser for article type."""
+        import xml.etree.ElementTree as ET
+        elem = ET.fromstring('''
+            <article key="journals/test/Test23" mdate="2023-01-01">
+                <author>Test Author</author>
+                <title>Test Article</title>
+                <year>2023</year>
+                <journal>Test Journal</journal>
+                <volume>10</volume>
+                <number>1</number>
+                <pages>1-10</pages>
+            </article>
+        ''')
+        
+        parser = RecordParser(elem)
+        
+        assert parser.type == "article"
+        assert parser.venue == "Test Journal"
+        assert parser.venue_type == "journal"
+        assert parser.journal == "Test Journal"
+        assert parser.volume == "10"
+        assert parser.number == "1"
+        assert parser.pages == "1-10"
+        
+        print(f"\n✓ Article parser: venue={parser.venue}, volume={parser.volume}")
 
 
 class TestPersonPageParser:
@@ -213,6 +247,11 @@ class TestPersonPageParser:
         affiliations = list(result.affiliations)
         if affiliations:
             print(f"  Affiliations: {affiliations}")
+        urls = list(result.urls)
+        if urls:
+            print(f"  URLs: {urls[:3]}...")
+        if result.orcid:
+            print(f"  ORCID: {result.orcid}")
     
     @pytest.mark.asyncio
     async def test_person_page_parser_publications(self, person_page_xml):
@@ -272,26 +311,6 @@ class TestPersonPageParser:
         for author in authors[:5]:
             print(f"    - {author.name} (pid={author.pid})")
     
-    @pytest.mark.asyncio
-    async def test_person_page_parser_dict(self, person_page_xml):
-        """Test __dict__ method excludes publications."""
-        result = PersonPageParser(person_page_xml)
-        
-        info = result.__dict__()
-        
-        # Should have basic info
-        assert "pid" in info
-        assert info["pid"] == PERSON_PID
-        assert "name" in info
-        assert info["name"] == PERSON_NAME
-        
-        # Should NOT have publications
-        assert "publications" not in info
-        
-        print(f"\n✓ __dict__() output:")
-        for k, v in info.items():
-            print(f"  {k}: {v}")
-    
     def test_invalid_person_page(self):
         """Test parsing invalid XML."""
         with pytest.raises(ValueError, match="Invalid"):
@@ -316,7 +335,12 @@ class TestVenuePageParser:
         assert result.title is not None
         
         print(f"\n✓ Parsed venue page:")
+        print(f"  Key: {result.key}")
         print(f"  Title: {result.title}")
+        if result.h2:
+            print(f"  H2: {result.h2}")
+        if result.h3:
+            print(f"  H3: {result.h3}")
     
     @pytest.mark.asyncio
     async def test_venue_page_parser_publications(self, venue_page_xml):
@@ -349,6 +373,23 @@ class TestVenuePageParser:
             print(f"    - {pub.key}: {title_short}")
     
     @pytest.mark.asyncio
+    async def test_venue_page_parser_proceedings(self, venue_page_xml):
+        """Test proceedings information from venue page."""
+        result = VenuePageParser(venue_page_xml)
+        
+        print(f"\n✓ Proceedings info:")
+        print(f"    Title: {result.proceedings_title}")
+        print(f"    Booktitle: {result.proceedings_booktitle}")
+        print(f"    Publisher: {result.proceedings_publisher}")
+        print(f"    ISBN: {result.proceedings_isbn}")
+        print(f"    Year: {result.proceedings_year}")
+        print(f"    URL: {result.proceedings_url}")
+        
+        ees = list(result.proceedings_ees)
+        if ees:
+            print(f"    EEs: {ees[:3]}")
+    
+    @pytest.mark.asyncio
     async def test_venue_page_parser_refs(self, venue_page_xml):
         """Test references from venue page."""
         result = VenuePageParser(venue_page_xml)
@@ -361,26 +402,6 @@ class TestVenuePageParser:
         print(f"\n✓ Venue refs:")
         print(f"    href: {href}")
         print(f"    ref: {ref}")
-    
-    @pytest.mark.asyncio
-    async def test_venue_page_parser_dict(self, venue_page_xml):
-        """Test __dict__ method excludes publications."""
-        result = VenuePageParser(venue_page_xml)
-        
-        info = result.__dict__()
-        
-        # Should have title
-        assert "title" in info
-        
-        # Should NOT have publications
-        assert "publications" not in info
-        
-        print(f"\n✓ __dict__() output:")
-        for k, v in info.items():
-            if isinstance(v, list) and len(v) > 5:
-                print(f"  {k}: [{v[0]}, ... ({len(v)} items)]")
-            else:
-                print(f"  {k}: {v}")
     
     def test_invalid_venue_page(self):
         """Test parsing invalid XML."""
@@ -407,6 +428,24 @@ class TestRecordAuthor:
         assert author.pid == "34/7659"
         
         print(f"\n✓ RecordAuthor: {author}")
+    
+    def test_record_author_with_orcid(self):
+        """Test RecordAuthor with ORCID."""
+        import xml.etree.ElementTree as ET
+        elem = ET.fromstring('<author pid="34/7659" orcid="0000-0001-2345-6789">Test Author</author>')
+        
+        author = RecordAuthor(elem)
+        
+        assert author.name == "Test Author"
+        assert author.pid == "34/7659"
+        assert author.orcid == "0000-0001-2345-6789"
+        
+        d = author.__dict__()
+        assert d["name"] == "Test Author"
+        assert d["pid"] == "34/7659"
+        assert d["orcid"] == "0000-0001-2345-6789"
+        
+        print(f"\n✓ RecordAuthor with ORCID: {author}")
     
     def test_record_author_to_dict(self):
         """Test RecordAuthor.__dict__ method."""

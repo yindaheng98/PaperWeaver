@@ -61,12 +61,12 @@
             }
         },
         {
-            "name": "pytest dblp parser",
+            "name": "pytest dblp datasrc",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
-                "tests/datasrc/dblp/test_dblp_parser.py",
+                "tests/datasrc/dblp",
                 "-v"
             ]
         },
