@@ -31,7 +31,7 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
 
     Tries dblp:url from info first, then paper:dblp:url: from paper identifiers.
     URL format: db/conf/cvpr/cvpr2016.html#HeZRS16
-    Returns: conf/cvpr/cvpr2016 (for fetching https://dblp.org/db/conf/cvpr/cvpr2016.xml)
+    Returns: db/conf/cvpr/cvpr2016 (for fetching https://dblp.org/db/conf/cvpr/cvpr2016.xml)
     """
     # Collect candidate URLs
     urls = []
@@ -48,8 +48,6 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
         # Must start with "db/"
         if not path.startswith("db/"):
             continue
-        # Remove "db/" prefix
-        path = path[3:]
         # Remove .html extension
         if path.endswith(".html"):
             path = path[:-5]

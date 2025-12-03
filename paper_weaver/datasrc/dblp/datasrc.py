@@ -203,7 +203,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
     async def _fetch_venue_page_by_key(self, key: str) -> VenuePageParser | None:
         """Fetch and parse venue page by venue key."""
 
-        url = f"https://dblp.org/db/{key}.xml"
+        url = f"https://dblp.org/{key}.xml"
 
         venue_page = await self.get_or_fetch(
             url,

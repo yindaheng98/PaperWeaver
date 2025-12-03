@@ -10,7 +10,7 @@ To use HTTP proxy, set the environment variable:
 
 Paper Key: conf/cvpr/HeZRS16 (Deep Residual Learning for Image Recognition)
 Author PID: 34/7659 (Kaiming He)
-Venue Key: conf/cvpr/cvpr2016 (CVPR 2016)
+Venue Key: db/conf/cvpr/cvpr2016 (CVPR 2016)
 
 Cache: Uses Redis at localhost:6379 if available, otherwise falls back to MemoryDataSrcCache.
 """
@@ -53,7 +53,7 @@ REAL_REDIS_AVAILABLE = _check_real_redis_connection()
 TEST_PAPER_KEY = "conf/cvpr/HeZRS16"  # ResNet paper
 TEST_AUTHOR_PID = "34/7659"  # Kaiming He
 TEST_AUTHOR_NAME = "Kaiming He"
-TEST_VENUE_KEY = "conf/cvpr/cvpr2016"  # CVPR 2016
+TEST_VENUE_KEY = "db/conf/cvpr/cvpr2016"  # CVPR 2016
 
 
 def get_http_proxy() -> str | None:

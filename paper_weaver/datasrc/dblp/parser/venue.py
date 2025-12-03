@@ -47,7 +47,9 @@ class VenuePageParser:
     @property
     def key(self) -> str | None:
         """Get venue title."""
-        return self.data.attrib.get("key")
+        key = self.data.attrib.get("key")
+        if key is not None and key.endswith(".bht"):
+            return key[:-4]  # Remove .bht suffix
 
     @property
     def title(self) -> str | None:
