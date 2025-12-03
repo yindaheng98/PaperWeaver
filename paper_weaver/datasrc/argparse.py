@@ -20,8 +20,8 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
 
     # DataSrc cache
     parser.add_argument("--datasrc-cache-mode", choices=["memory", "redis"], default="memory", help="DataSrc cache backend (default: memory)")
-    parser.add_argument("--datasrc-redis-url", default="redis://localhost:6379", help="Redis URL for DataSrc cache")
-    parser.add_argument("--datasrc-redis-prefix", default="datasrc_cache", help="Redis key prefix for DataSrc cache")
+    parser.add_argument("--datasrc-redis-url", default="redis://localhost:6379", help="Redis URL for DataSrc cache (default: redis://localhost:6379)")
+    parser.add_argument("--datasrc-redis-prefix", default="paper-weaver-datasrc-cache", help="Redis key prefix for DataSrc cache (default: paper-weaver-datasrc-cache)")
     parser.add_argument("--datasrc-redis-expire", type=int, help="TTL seconds for DataSrc redis cache")
 
     # Common HTTP settings
@@ -30,7 +30,7 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--datasrc-http-timeout", type=int, default=30, help="HTTP timeout in seconds (default: 30)")
 
     # SemanticScholar specific
-    parser.add_argument("--datasrc-ss-cache-ttl", type=int, default=604800, help="SemanticScholar cache TTL in seconds (default: 7 days)")
+    parser.add_argument("--datasrc-ss-cache-ttl", type=int, default=604800, help="SemanticScholar cache TTL in seconds (default: 604800)")
     parser.add_argument("--datasrc-ss-api-key", help="SemanticScholar API key")
 
     # DBLP specific

@@ -14,10 +14,10 @@ from .factory import HybridCacheBuilder, FullWeaverCache
 def add_cache_args(parser: argparse.ArgumentParser) -> None:
     """Add cache-related command-line arguments."""
     parser.add_argument("--cache-mode", choices=["memory", "redis"], default="memory", help="Cache backend mode (default: memory)")
-    parser.add_argument("--cache-redis-prefix", default="pw", help="Redis key prefix (default: pw)")
+    parser.add_argument("--cache-redis-prefix", default="paper-weaver-cache", help="Redis key prefix (default: paper-weaver-cache)")
 
     # Redis connection - 4 clients
-    parser.add_argument("--cache-redis-url", default="redis://localhost:6379", help="Default Redis URL for all storages")
+    parser.add_argument("--cache-redis-url", default="redis://localhost:6379", help="Default Redis URL for all storages (default: redis://localhost:6379)")
     parser.add_argument("--cache-redis-reg-url", help="Redis URL for registry storage")
     parser.add_argument("--cache-redis-info-url", help="Redis URL for info storage")
     parser.add_argument("--cache-redis-committed-url", help="Redis URL for committed storage")

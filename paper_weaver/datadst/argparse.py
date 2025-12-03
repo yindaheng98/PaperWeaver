@@ -14,10 +14,10 @@ from .neo4j import Neo4jDataDst
 def add_datadst_args(parser: argparse.ArgumentParser) -> None:
     """Add DataDst-related command-line arguments."""
     parser.add_argument("--datadst-type", choices=["neo4j"], default="neo4j", help="DataDst type (default: neo4j)")
-    parser.add_argument("--datadst-neo4j-uri", default="bolt://localhost:7687", help="Neo4j connection URI")
-    parser.add_argument("--datadst-neo4j-user", default="neo4j", help="Neo4j username")
-    parser.add_argument("--datadst-neo4j-password", default="neo4j", help="Neo4j password")
-    parser.add_argument("--datadst-neo4j-database", default="neo4j", help="Neo4j database name")
+    parser.add_argument("--datadst-neo4j-uri", default="bolt://localhost:7687", help="Neo4j connection URI (default: bolt://localhost:7687)")
+    parser.add_argument("--datadst-neo4j-user", default="neo4j", help="Neo4j username (default: neo4j)")
+    parser.add_argument("--datadst-neo4j-password", default="neo4j", help="Neo4j password (default: neo4j)")
+    parser.add_argument("--datadst-neo4j-database", default="neo4j", help="Neo4j database name (default: neo4j)")
 
 
 def create_datadst_from_args(args: argparse.Namespace) -> tuple[DataDst, object]:
