@@ -60,13 +60,10 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     # ==================== Paper Methods ====================
 
-    async def _fetch_record(self, paper: Paper) -> RecordPageParser | None:
+    async def _fetch_record_page_by_key(self, key: str) -> RecordPageParser | None:
         """Fetch and parse record page by paper key."""
-        paper_key = paper_to_dblp_key(paper)
-        if paper_key is None:
-            raise ValueError("No valid DBLP identifier found for paper")
 
-        url = f"https://dblp.org/rec/{paper_key}.xml"
+        url = f"https://dblp.org/rec/{key}.xml"
 
         record_page = await self.get_or_fetch(
             url,
@@ -74,12 +71,24 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             RecordPageParser,
             self._cache_ttl
         )
+        if record_page is None:
+            raise ValueError("Failed to fetch record page for paper")
 
         return record_page
 
+    async def _fetch_record_page(self, paper: Paper) -> RecordPageParser | None:
+        """Fetch and parse record page by paper key."""
+
+        paper_key = paper_to_dblp_key(paper)
+
+        if paper_key is None:
+            raise ValueError("No valid DBLP identifier found for paper")
+
+        return await self._fetch_record_page_by_key(paper_key)
+
     async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict]:
         """Get paper information from DBLP."""
-        record_page = await self._fetch_record(paper)
+        record_page = await self._fetch_record_page(paper)
 
         updated_paper = record_to_paper(record_page)
         updated_paper.identifiers.update(paper.identifiers)
@@ -108,7 +117,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         Authors returned will only have dblp-author-name:{name} identifiers
         unless the record was fetched from an author page (which includes pids).
         """
-        record_page = await self._fetch_record(paper)
+        record_page = await self._fetch_record_page(paper)
 
         authors = []
         for record_author in record_page.authors:
@@ -141,23 +150,23 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     # ==================== Author Methods ====================
 
-    async def _fetch_pid(self, pid: str) -> PersonPageParser | None:
+    async def _fetch_person_page_by_id(self, pid: str) -> PersonPageParser | None:
         """Fetch and parse person page by author."""
 
         url = f"https://dblp.org/pid/{pid}.xml"
 
-        person = await self.get_or_fetch(
+        person_page = await self.get_or_fetch(
             url,
             lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
             PersonPageParser,
             self._cache_ttl
         )
-        if person is None:
+        if person_page is None:
             raise ValueError("Failed to fetch person page for author")
 
-        return person
+        return person_page
 
-    async def _fetch_person(self, author: Author) -> PersonPageParser | None:
+    async def _fetch_person_page(self, author: Author) -> PersonPageParser | None:
         """Fetch and parse person page by author."""
 
         author_pid = author_to_dblp_pid(author)
@@ -165,11 +174,11 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         if author_pid is None:
             raise ValueError("No valid DBLP identifier found for author")
 
-        return await self._fetch_pid(author_pid)
+        return await self._fetch_person_page_by_id(author_pid)
 
     async def get_author_info(self, author: Author) -> Tuple[Author, dict]:
         """Get author information from DBLP."""
-        person_page = await self._fetch_person(author)
+        person_page = await self._fetch_person_page(author)
 
         updated_author = person_to_author(person_page)
         updated_author.identifiers.update(author.identifiers)
@@ -178,7 +187,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     async def get_papers_by_author(self, author: Author) -> list[Paper]:
         """Get papers by an author from DBLP."""
-        person_page = await self._fetch_person(author)
+        person_page = await self._fetch_person_page(author)
 
         papers = []
         for publication in person_page.publications:
@@ -189,13 +198,10 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     # ==================== Venue Methods ====================
 
-    async def _fetch_venue(self, venue: Venue) -> VenuePageParser | None:
-        """Fetch and parse venue page by venue."""
-        venue_key = venue_to_dblp_key(venue)
-        if venue_key is None:
-            raise ValueError("No valid DBLP identifier found for venue")
+    async def _fetch_venue_page_by_key(self, key: str) -> VenuePageParser | None:
+        """Fetch and parse venue page by venue key."""
 
-        url = f"https://dblp.org/db/{venue_key}.xml"
+        url = f"https://dblp.org/db/{key}.xml"
 
         venue_page = await self.get_or_fetch(
             url,
@@ -203,12 +209,24 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             VenuePageParser,
             self._cache_ttl
         )
+        if venue_page is None:
+            raise ValueError("Failed to fetch venue page for venue")
 
         return venue_page
 
+    async def _fetch_venue_page(self, venue: Venue) -> VenuePageParser | None:
+        """Fetch and parse venue page by venue."""
+
+        venue_key = venue_to_dblp_key(venue)
+
+        if venue_key is None:
+            raise ValueError("No valid DBLP identifier found for venue")
+
+        return await self._fetch_venue_page_by_key(venue_key)
+
     async def get_venue_info(self, venue: Venue) -> Tuple[Venue, dict]:
         """Get venue information from DBLP."""
-        venue_page = await self._fetch_venue(venue)
+        venue_page = await self._fetch_venue_page(venue)
 
         updated_venue = venue_to_venue(venue_page)
         updated_venue.identifiers.update(venue.identifiers)
@@ -217,7 +235,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     async def get_papers_by_venue(self, venue: Venue) -> list[Paper]:
         """Get papers from a venue from DBLP."""
-        venue_page = await self._fetch_venue(venue)
+        venue_page = await self._fetch_venue_page(venue)
 
         papers = []
         for publication in venue_page.publications:
