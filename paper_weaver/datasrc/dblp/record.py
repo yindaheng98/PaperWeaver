@@ -6,6 +6,7 @@ and extract DBLP identifiers from Paper/Author objects.
 """
 
 from ...dataclass import Paper, Author
+from ..title_hash import title_hash
 from .parser import RecordParser, RecordAuthor
 
 
@@ -61,6 +62,11 @@ def record_to_paper(record: RecordParser) -> Paper:
 
     if record.url:
         identifiers.add(f"dblp:url:{record.url}")
+
+    if record.title:
+        identifiers.add(f"title:{record.title}")
+        for method, h in title_hash(record.title).items():
+            identifiers.add(f"title_hash:{method}:{h}")
 
     for ee in record.ees:
         identifiers.add(f"{ee}")
