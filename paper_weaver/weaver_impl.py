@@ -1,8 +1,6 @@
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 import asyncio
 import logging
-from .dataclass import DataSrc, DataDst
-from .iface import SimpleWeaver
 from .iface_a2p import Author2PapersWeaverIface, Author2PapersWeaverCacheIface
 from .iface_p2a import Paper2AuthorsWeaverIface, Paper2AuthorsWeaverCacheIface
 from .iface_p2c import Paper2CitationsWeaverIface, Paper2CitationsWeaverCacheIface
@@ -10,8 +8,31 @@ from .iface_p2r import Paper2ReferencesWeaverIface, Paper2ReferencesWeaverCacheI
 from .iface_p2v import Paper2VenuesWeaverIface, Paper2VenuesWeaverCacheIface
 
 
-class Author2PaperWeaver(Author2PapersWeaverIface):
-    logger = logging.getLogger("Author2PaperWeaver")
+class Weaver(metaclass=ABCMeta):
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger(self.__class__.__name__)
+
+    @abstractmethod
+    async def bfs_once(self) -> int:
+        """Perform one BFS iteration, return number of new entities fetched."""
+        raise NotImplementedError
+
+    async def bfs(self, max_iterations: int = 10) -> int:
+        """Perform BFS for a number of iterations, return total number of new entities fetched."""
+        total_new = 0
+        for iteration in range(max_iterations):
+            self.logger.info(f"Starting BFS iteration {iteration + 1}")
+            new_count = await self.bfs_once()
+            if new_count == 0:
+                self.logger.info("No new entities fetched, stopping BFS.")
+                break
+            total_new += new_count
+        self.logger.info(f"BFS completed with total {total_new} new entities fetched.")
+        return total_new
+
+
+class Author2PaperWeaver(Author2PapersWeaverIface, Weaver):
 
     @property
     @abstractmethod
@@ -29,9 +50,11 @@ class Author2PaperWeaver(Author2PapersWeaverIface):
         self.logger.info(f"Found {paper_succ_count} new papers from {author_succ_count} authors. {paper_fail_count} papers fetch failed. {author_fail_count} authors fetch failed.")
         return paper_succ_count
 
+    async def bfs_once(self) -> int:
+        return await self.all_author_to_papers()
 
-class Paper2AuthorWeaver(Paper2AuthorsWeaverIface):
-    logger = logging.getLogger("Paper2AuthorWeaver")
+
+class Paper2AuthorWeaver(Paper2AuthorsWeaverIface, Weaver):
 
     @property
     @abstractmethod
@@ -49,9 +72,11 @@ class Paper2AuthorWeaver(Paper2AuthorsWeaverIface):
         self.logger.info(f"Found {author_succ_count} new authors from {paper_succ_count} papers. {author_fail_count} authors fetch failed. {paper_fail_count} papers fetch failed.")
         return author_succ_count
 
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_authors()
 
-class Paper2CitationWeaver(Paper2CitationsWeaverIface):
-    logger = logging.getLogger("Paper2CitationWeaver")
+
+class Paper2CitationWeaver(Paper2CitationsWeaverIface, Weaver):
 
     @property
     @abstractmethod
@@ -69,9 +94,11 @@ class Paper2CitationWeaver(Paper2CitationsWeaverIface):
         self.logger.info(f"Found {citation_succ_count} new citations from {paper_succ_count} papers. {citation_fail_count} citations fetch failed. {paper_fail_count} papers fetch failed.")
         return citation_succ_count
 
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_citations()
 
-class Paper2ReferenceWeaver(Paper2ReferencesWeaverIface):
-    logger = logging.getLogger("Paper2ReferenceWeaver")
+
+class Paper2ReferenceWeaver(Paper2ReferencesWeaverIface, Weaver):
 
     @property
     @abstractmethod
@@ -89,9 +116,11 @@ class Paper2ReferenceWeaver(Paper2ReferencesWeaverIface):
         self.logger.info(f"Found {reference_succ_count} new references from {paper_succ_count} papers. {reference_fail_count} references fetch failed. {paper_fail_count} papers fetch failed.")
         return reference_succ_count
 
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_references()
 
-class Paper2VenueWeaver(Paper2VenuesWeaverIface):
-    logger = logging.getLogger("Paper2VenueWeaver")
+
+class Paper2VenueWeaver(Paper2VenuesWeaverIface, Weaver):
 
     @property
     @abstractmethod
@@ -108,3 +137,6 @@ class Paper2VenueWeaver(Paper2VenuesWeaverIface):
         venue_succ_count, venue_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
         self.logger.info(f"Found {venue_succ_count} new venues from {paper_succ_count} papers. {venue_fail_count} venues fetch failed. {paper_fail_count} papers fetch failed.")
         return venue_succ_count
+
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_venues()
