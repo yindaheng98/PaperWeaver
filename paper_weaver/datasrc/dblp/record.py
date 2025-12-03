@@ -1,11 +1,28 @@
 """
 DBLP Record/Paper page utilities.
 
-Provides functions to convert RecordParser/RecordPageParser to Paper and info dict.
+Provides functions to convert RecordParser/RecordPageParser to Paper and info dict,
+and extract DBLP identifiers from Paper/Author objects.
 """
 
-from ...dataclass import Paper
-from .parser import RecordParser
+from ...dataclass import Paper, Author
+from .parser import RecordParser, RecordAuthor
+
+
+def paper_to_dblp_key(paper: Paper) -> str | None:
+    """
+    Extract DBLP paper key from Paper identifiers.
+
+    Args:
+        paper: Paper object with identifiers
+
+    Returns:
+        DBLP paper key (e.g., "conf/cvpr/HeZRS16") or None if not found
+    """
+    for ident in paper.identifiers:
+        if ident.startswith("dblp:"):
+            return ident[5:]  # Remove "dblp:" prefix
+    return None
 
 
 def record_to_paper(record: RecordParser) -> Paper:

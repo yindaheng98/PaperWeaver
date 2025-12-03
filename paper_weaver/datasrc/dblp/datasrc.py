@@ -58,6 +58,56 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         self._http_proxy = http_proxy
         self._http_timeout = http_timeout
 
+    # ==================== Paper Methods ====================
+
+    async def _fetch_record(self, paper: Paper) -> RecordPageParser | None:
+        """Fetch and parse record page by paper key."""
+        paper_key = paper_to_dblp_key(paper)
+        if paper_key is None:
+            raise ValueError("No valid DBLP identifier found for paper")
+
+        url = f"https://dblp.org/rec/{paper_key}.xml"
+
+        record_page = await self.get_or_fetch(
+            url,
+            lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
+            RecordPageParser,
+            self._cache_ttl
+        )
+
+        return record_page
+
+    async def get_paper_info(self, paper: Paper) -> Tuple[Paper, dict]:
+        """Get paper information from DBLP."""
+        record_page = await self._fetch_record(paper)
+
+        updated_paper = record_to_paper(record_page)
+        updated_paper.identifiers.update(paper.identifiers)
+        info = record_to_info(record_page)
+        return updated_paper, info
+
+    async def get_references_by_paper(self, paper: Paper) -> list[Paper]:
+        """
+        Get references (papers cited by this paper) from DBLP.
+
+        Note: DBLP API does not provide reference information.
+        This method always raises NotImplementedError.
+        """
+        raise NotImplementedError(
+            "DBLP API does not provide reference information"
+        )
+
+    async def get_citations_by_paper(self, paper: Paper) -> list[Paper]:
+        """
+        Get citations (papers that cite this paper) from DBLP.
+
+        Note: DBLP API does not provide citation information.
+        This method always raises NotImplementedError.
+        """
+        raise NotImplementedError(
+            "DBLP API does not provide citation information"
+        )
+
     # ==================== Author Methods ====================
 
     async def _fetch_person(self, author: Author) -> PersonPageParser | None:
@@ -79,19 +129,19 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     async def get_author_info(self, author: Author) -> Tuple[Author, dict]:
         """Get author information from DBLP."""
-        person = await self._fetch_person(author)
+        person_page = await self._fetch_person(author)
 
-        updated_author = person_to_author(person)
+        updated_author = person_to_author(person_page)
         updated_author.identifiers.update(author.identifiers)
-        info = person_to_info(person)
+        info = person_to_info(person_page)
         return updated_author, info
 
     async def get_papers_by_author(self, author: Author) -> list[Paper]:
         """Get papers by an author from DBLP."""
-        person = await self._fetch_person(author)
+        person_page = await self._fetch_person(author)
 
         papers = []
-        for publication in person.publications:
+        for publication in person_page.publications:
             paper = record_to_paper(publication)
             if paper.identifiers:
                 papers.append(paper)
