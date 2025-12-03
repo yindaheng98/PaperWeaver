@@ -100,6 +100,23 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         updated_venue, _ = await self.get_venue_info(venue)
         return [updated_venue]
 
+    async def get_authors_by_paper(self, paper: Paper) -> list[Author]:
+        """
+        Get authors for a paper from DBLP.
+
+        Note: DBLP paper pages (rec/xxx.xml) do NOT contain author pid attributes.
+        Authors returned will only have dblp-author-name:{name} identifiers
+        unless the record was fetched from an author page (which includes pids).
+        """
+        record_page = await self._fetch_record(paper)
+
+        authors = []
+        for record_author in record_page.authors:
+            author = author_from_record_author(record_author)
+            if author is not None:
+                authors.append(author)
+        return authors
+
     async def get_references_by_paper(self, paper: Paper) -> list[Paper]:
         """
         Get references (papers cited by this paper) from DBLP.

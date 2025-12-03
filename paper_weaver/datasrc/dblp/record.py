@@ -25,6 +25,26 @@ def paper_to_dblp_key(paper: Paper) -> str | None:
     return None
 
 
+def author_from_record_author(record_author: RecordAuthor) -> Author | None:
+    """
+    Create Author from RecordAuthor (with pid).
+
+    Only returns Author if pid is available (from person pages).
+
+    Args:
+        record_author: RecordAuthor from parser
+
+    Returns:
+        Author with identifiers or None if no pid
+    """
+    identifiers = set()
+    if record_author.pid:
+        identifiers = {f"dblp-author:{record_author.pid}"}
+    if record_author.name:
+        identifiers.add(f"dblp-author-name:{record_author.name}")
+    return Author(identifiers=identifiers) if identifiers else None
+
+
 def record_to_paper(record: RecordParser) -> Paper:
     """
     Convert RecordParser to Paper with identifiers.
