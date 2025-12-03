@@ -26,10 +26,10 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
     DataSrc implementation for DBLP API.
 
     Uses CachedAsyncPool for caching and concurrency control.
-    Identifiers use prefixes:
-    - Paper: "dblp:{key}", "dblp-url:{url}"
-    - Author: "dblp-author:{pid}", "dblp-author-name:{name}"
-    - Venue: "dblp-venue:{key}", "dblp-venue-title:{title}"
+    Identifiers use format {type}:{info_key}:{value} matching info dict keys:
+    - Paper: "paper:dblp:key:{key}", "paper:dblp:url:{url}"
+    - Author: "author:dblp:pid:{pid}", "author:name:{name}", "author:orcid:{orcid}"
+    - Venue: "venue:dblp:key:{key}", "venue:title:{title}", "venue:proceedings_title:{title}"
     """
 
     # Default cache TTL in seconds (7 days)
@@ -90,13 +90,13 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         """Get venues for a paper from DBLP."""
         updated_paper, info = await self.get_paper_info(paper)
 
-        # Extract venue key from dblp:url or dblp-url: identifier
+        # Extract venue key from dblp:url or paper:dblp:url: identifier
         venue_key = venue_key_from_paper(updated_paper, info)
         if venue_key is None:
             raise ValueError("No valid DBLP venue key found for paper")
 
         # Fetch full venue page (cached)
-        venue = Venue(identifiers={f"dblp-venue:{venue_key}"})
+        venue = Venue(identifiers={f"venue:dblp:key:{venue_key}"})
         updated_venue, _ = await self.get_venue_info(venue)
         return [updated_venue]
 
@@ -141,13 +141,10 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
     # ==================== Author Methods ====================
 
-    async def _fetch_person(self, author: Author) -> PersonPageParser | None:
+    async def _fetch_pid(self, pid: str) -> PersonPageParser | None:
         """Fetch and parse person page by author."""
-        author_pid = author_to_dblp_pid(author)
-        if author_pid is None:
-            raise ValueError("No valid DBLP identifier found for author")
 
-        url = f"https://dblp.org/pid/{author_pid}.xml"
+        url = f"https://dblp.org/pid/{pid}.xml"
 
         person = await self.get_or_fetch(
             url,
@@ -155,8 +152,20 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             PersonPageParser,
             self._cache_ttl
         )
+        if person is None:
+            raise ValueError("Failed to fetch person page for author")
 
         return person
+
+    async def _fetch_person(self, author: Author) -> PersonPageParser | None:
+        """Fetch and parse person page by author."""
+
+        author_pid = author_to_dblp_pid(author)
+
+        if author_pid is None:
+            raise ValueError("No valid DBLP identifier found for author")
+
+        return await self._fetch_pid(author_pid)
 
     async def get_author_info(self, author: Author) -> Tuple[Author, dict]:
         """Get author information from DBLP."""
