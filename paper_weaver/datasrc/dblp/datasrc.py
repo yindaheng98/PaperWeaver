@@ -28,7 +28,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
     Uses CachedAsyncPool for caching and concurrency control.
     Identifiers use format {type}:{info_key}:{value} matching info dict keys:
     - Paper: "paper:dblp:key:{key}", "paper:dblp:url:{url}"
-    - Author: "author:dblp:pid:{pid}", "author:name:{name}", "author:orcid:{orcid}"
+    - Author: "author:dblp:pid:{pid}", "author:dblp:name:{name}", "author:orcid:{orcid}"
     - Venue: "venue:dblp:key:{key}", "venue:title:{title}", "venue:proceedings_title:{title}"
     """
 

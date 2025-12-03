@@ -41,7 +41,7 @@ def person_page_to_author(person: PersonPageParser) -> Author:
         identifiers.add(f"author:dblp:pid:{person.pid}")
 
     if person.name:
-        identifiers.add(f"author:name:{person.name}")
+        identifiers.add(f"author:dblp:name:{person.name}")
 
     if person.orcid:
         identifiers.add(f"author:orcid:{person.orcid}")
