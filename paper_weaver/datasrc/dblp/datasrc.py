@@ -58,6 +58,45 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         self._http_proxy = http_proxy
         self._http_timeout = http_timeout
 
+    # ==================== Author Methods ====================
+
+    async def _fetch_person(self, author: Author) -> PersonPageParser | None:
+        """Fetch and parse person page by author."""
+        author_pid = author_to_dblp_pid(author)
+        if author_pid is None:
+            raise ValueError("No valid DBLP identifier found for author")
+
+        url = f"https://dblp.org/pid/{author_pid}.xml"
+
+        person = await self.get_or_fetch(
+            url,
+            lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
+            PersonPageParser,
+            self._cache_ttl
+        )
+
+        return person
+
+    async def get_author_info(self, author: Author) -> Tuple[Author, dict]:
+        """Get author information from DBLP."""
+        person = await self._fetch_person(author)
+
+        updated_author = person_to_author(person)
+        updated_author.identifiers.update(author.identifiers)
+        info = person_to_info(person)
+        return updated_author, info
+
+    async def get_papers_by_author(self, author: Author) -> list[Paper]:
+        """Get papers by an author from DBLP."""
+        person = await self._fetch_person(author)
+
+        papers = []
+        for publication in person.publications:
+            paper = record_to_paper(publication)
+            if paper.identifiers:
+                papers.append(paper)
+        return papers
+
     # ==================== Venue Methods ====================
 
     async def _fetch_venue(self, venue: Venue) -> VenuePageParser | None:

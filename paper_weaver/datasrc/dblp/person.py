@@ -1,11 +1,28 @@
 """
 DBLP Person/Author page utilities.
 
-Provides functions to convert PersonPageParser to Author and info dict.
+Provides functions to convert PersonPageParser to Author and info dict,
+and extract DBLP identifiers from Author objects.
 """
 
 from ...dataclass import Author
 from .parser import PersonPageParser
+
+
+def author_to_dblp_pid(author: Author) -> str | None:
+    """
+    Extract DBLP person ID from Author identifiers.
+
+    Args:
+        author: Author object with identifiers
+
+    Returns:
+        DBLP person ID (e.g., "h/KaimingHe") or None if not found
+    """
+    for ident in author.identifiers:
+        if ident.startswith("dblp-author:"):
+            return ident[12:]  # Remove "dblp-author:" prefix
+    return None
 
 
 def person_to_author(person: PersonPageParser) -> Author:
