@@ -87,3 +87,17 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
         n_failed = sum([1 for r in results if r is None])
 
         return n_new_authors, n_failed
+
+    async def all_paper_to_authors(self) -> int:
+        tasks = []
+        async for paper in self.cache.iterate_papers():
+            tasks.append(self.paper_to_authors(paper))
+        self.logger.info(f"Fetching authors from {len(tasks)} new papers")
+        state = await asyncio.gather(*tasks)
+        paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
+        author_succ_count, author_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
+        self.logger.info(f"Found {author_succ_count} new authors from {paper_succ_count} papers. {author_fail_count} authors fetch failed. {paper_fail_count} papers fetch failed.")
+        return author_succ_count
+
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_authors()

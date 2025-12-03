@@ -87,3 +87,17 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
         n_failed = sum([1 for r in results if r is None])
 
         return n_new_citations, n_failed
+
+    async def all_paper_to_citations(self) -> int:
+        tasks = []
+        async for paper in self.cache.iterate_papers():
+            tasks.append(self.paper_to_citations(paper))
+        self.logger.info(f"Fetching citations from {len(tasks)} new papers")
+        state = await asyncio.gather(*tasks)
+        paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
+        citation_succ_count, citation_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
+        self.logger.info(f"Found {citation_succ_count} new citations from {paper_succ_count} papers. {citation_fail_count} citations fetch failed. {paper_fail_count} papers fetch failed.")
+        return citation_succ_count
+
+    async def bfs_once(self) -> int:
+        return await self.all_paper_to_citations()

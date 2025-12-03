@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import logging
 from typing import Tuple, AsyncIterator
 from .dataclass import Paper, Author, Venue, DataSrc, DataDst
 
@@ -64,6 +65,28 @@ class WeaverIface(metaclass=ABCMeta):
     @abstractmethod
     def cache(self) -> WeaverCacheIface:
         raise ValueError("Cache is not set")
+
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger(self.__class__.__name__)
+
+    @abstractmethod
+    async def bfs_once(self) -> int:
+        """Perform one BFS iteration, return number of new entities fetched."""
+        raise NotImplementedError
+
+    async def bfs(self, max_iterations: int = 10) -> int:
+        """Perform BFS for a number of iterations, return total number of new entities fetched."""
+        total_new = 0
+        for iteration in range(max_iterations):
+            self.logger.info(f"Starting BFS iteration {iteration + 1}")
+            new_count = await self.bfs_once()
+            if new_count == 0:
+                self.logger.info("No new entities fetched, stopping BFS.")
+                break
+            total_new += new_count
+        self.logger.info(f"BFS completed with total {total_new} new entities fetched.")
+        return total_new
 
 
 class SimpleWeaver(WeaverIface):
