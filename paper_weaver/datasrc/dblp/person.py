@@ -42,6 +42,9 @@ def person_to_author(person: PersonPageParser) -> Author:
     if person.name:
         identifiers.add(f"dblp-author-name:{person.name}")
 
+    if person.orcid:
+        identifiers.add(f"orcid:{person.orcid}")
+
     for url in person.urls:
         identifiers.add(url)
 
@@ -75,5 +78,7 @@ def person_to_info(person: PersonPageParser) -> dict:
     urls = list(person.urls)
     if urls:
         info["urls"] = urls
+    if person.orcid:
+        info["orcid"] = person.orcid
 
     return info
