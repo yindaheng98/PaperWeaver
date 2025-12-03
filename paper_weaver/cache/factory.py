@@ -71,8 +71,11 @@ class HybridCacheBuilder:
     Builder for creating caches with mixed memory/redis backends.
 
     Allows fine-grained control over which components use which backend.
+    Each with_redis_* method accepts an optional redis_client parameter
+    to use a different Redis client for that specific component.
 
     Example:
+        # Using a single redis client (default)
         builder = HybridCacheBuilder(redis_client, expire=3600)
         cache = (builder
             .with_memory_paper_registry()
@@ -80,6 +83,14 @@ class HybridCacheBuilder:
             .with_memory_author_registry()
             .with_redis_author_info("author_info")
             .with_memory_committed_author_links()
+            .build_weaver_cache())
+
+        # Using different redis clients for different components
+        builder = HybridCacheBuilder(expire=3600)
+        cache = (builder
+            .with_redis_paper_registry("paper_reg", redis_client=redis_client_1)
+            .with_redis_paper_info("paper_info", redis_client=redis_client_2)
+            .with_redis_author_registry("author_reg", redis_client=redis_client_1)
             .build_weaver_cache())
     """
 
@@ -114,8 +125,9 @@ class HybridCacheBuilder:
         self._paper_registry = MemoryIdentifierRegistry()
         return self
 
-    def with_redis_paper_registry(self, prefix: str = "paper_reg", expire: int | None = None) -> "HybridCacheBuilder":
-        self._paper_registry = RedisIdentifierRegistry(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_paper_registry(self, prefix: str = "paper_reg", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._paper_registry = RedisIdentifierRegistry(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Paper info
@@ -124,8 +136,9 @@ class HybridCacheBuilder:
         self._paper_info = MemoryInfoStorage()
         return self
 
-    def with_redis_paper_info(self, prefix: str = "paper_info", expire: int | None = None) -> "HybridCacheBuilder":
-        self._paper_info = RedisInfoStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_paper_info(self, prefix: str = "paper_info", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._paper_info = RedisInfoStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Author registry
@@ -134,8 +147,9 @@ class HybridCacheBuilder:
         self._author_registry = MemoryIdentifierRegistry()
         return self
 
-    def with_redis_author_registry(self, prefix: str = "author_reg", expire: int | None = None) -> "HybridCacheBuilder":
-        self._author_registry = RedisIdentifierRegistry(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_author_registry(self, prefix: str = "author_reg", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._author_registry = RedisIdentifierRegistry(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Author info
@@ -144,8 +158,9 @@ class HybridCacheBuilder:
         self._author_info = MemoryInfoStorage()
         return self
 
-    def with_redis_author_info(self, prefix: str = "author_info", expire: int | None = None) -> "HybridCacheBuilder":
-        self._author_info = RedisInfoStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_author_info(self, prefix: str = "author_info", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._author_info = RedisInfoStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Venue registry
@@ -154,8 +169,9 @@ class HybridCacheBuilder:
         self._venue_registry = MemoryIdentifierRegistry()
         return self
 
-    def with_redis_venue_registry(self, prefix: str = "venue_reg", expire: int | None = None) -> "HybridCacheBuilder":
-        self._venue_registry = RedisIdentifierRegistry(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_venue_registry(self, prefix: str = "venue_reg", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._venue_registry = RedisIdentifierRegistry(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Venue info
@@ -164,8 +180,9 @@ class HybridCacheBuilder:
         self._venue_info = MemoryInfoStorage()
         return self
 
-    def with_redis_venue_info(self, prefix: str = "venue_info", expire: int | None = None) -> "HybridCacheBuilder":
-        self._venue_info = RedisInfoStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_venue_info(self, prefix: str = "venue_info", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._venue_info = RedisInfoStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Committed links
@@ -174,24 +191,27 @@ class HybridCacheBuilder:
         self._committed_author_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_committed_author_links(self, prefix: str = "committed_ap", expire: int | None = None) -> "HybridCacheBuilder":
-        self._committed_author_links = RedisCommittedLinkStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_committed_author_links(self, prefix: str = "committed_ap", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._committed_author_links = RedisCommittedLinkStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_committed_reference_links(self) -> "HybridCacheBuilder":
         self._committed_reference_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_committed_reference_links(self, prefix: str = "committed_pr", expire: int | None = None) -> "HybridCacheBuilder":
-        self._committed_reference_links = RedisCommittedLinkStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_committed_reference_links(self, prefix: str = "committed_pr", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._committed_reference_links = RedisCommittedLinkStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_committed_venue_links(self) -> "HybridCacheBuilder":
         self._committed_venue_links = MemoryCommittedLinkStorage()
         return self
 
-    def with_redis_committed_venue_links(self, prefix: str = "committed_pv", expire: int | None = None) -> "HybridCacheBuilder":
-        self._committed_venue_links = RedisCommittedLinkStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_committed_venue_links(self, prefix: str = "committed_pv", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._committed_venue_links = RedisCommittedLinkStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Pending lists
@@ -200,40 +220,45 @@ class HybridCacheBuilder:
         self._pending_papers = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_papers(self, prefix: str = "pending_a2p", expire: int | None = None) -> "HybridCacheBuilder":
-        self._pending_papers = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_pending_papers(self, prefix: str = "pending_a2p", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._pending_papers = RedisPendingListStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_authors(self) -> "HybridCacheBuilder":
         self._pending_authors = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_authors(self, prefix: str = "pending_p2a", expire: int | None = None) -> "HybridCacheBuilder":
-        self._pending_authors = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_pending_authors(self, prefix: str = "pending_p2a", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._pending_authors = RedisPendingListStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_references(self) -> "HybridCacheBuilder":
         self._pending_references = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_references(self, prefix: str = "pending_p2r", expire: int | None = None) -> "HybridCacheBuilder":
-        self._pending_references = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_pending_references(self, prefix: str = "pending_p2r", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._pending_references = RedisPendingListStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_citations(self) -> "HybridCacheBuilder":
         self._pending_citations = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_citations(self, prefix: str = "pending_p2c", expire: int | None = None) -> "HybridCacheBuilder":
-        self._pending_citations = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_pending_citations(self, prefix: str = "pending_p2c", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._pending_citations = RedisPendingListStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     def with_memory_pending_venues(self) -> "HybridCacheBuilder":
         self._pending_venues = MemoryPendingListStorage()
         return self
 
-    def with_redis_pending_venues(self, prefix: str = "pending_p2v", expire: int | None = None) -> "HybridCacheBuilder":
-        self._pending_venues = RedisPendingListStorage(self._redis, prefix, expire if expire is not None else self._expire)
+    def with_redis_pending_venues(self, prefix: str = "pending_p2v", expire: int | None = None, redis_client=None) -> "HybridCacheBuilder":
+        client = redis_client if redis_client is not None else self._redis
+        self._pending_venues = RedisPendingListStorage(client, prefix, expire if expire is not None else self._expire)
         return self
 
     # Convenience methods for setting all components at once
