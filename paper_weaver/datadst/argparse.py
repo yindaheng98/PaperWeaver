@@ -8,7 +8,7 @@ Supports:
 import argparse
 
 from ..dataclass import DataDst
-from ..datadst import Neo4jDataDst
+from .neo4j import Neo4jDataDst
 
 
 def add_datadst_args(parser: argparse.ArgumentParser) -> None:

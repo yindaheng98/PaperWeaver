@@ -9,9 +9,9 @@ Supports:
 import argparse
 
 from ..dataclass import DataSrc
-from ..datasrc import MemoryDataSrcCache, RedisDataSrcCache
-from ..datasrc.semanticscholar import SemanticScholarDataSrc
-from ..datasrc.dblp import DBLPDataSrc
+from .cache_impl import MemoryDataSrcCache, RedisDataSrcCache
+from .semanticscholar import SemanticScholarDataSrc
+from .dblp import DBLPDataSrc
 
 
 def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
