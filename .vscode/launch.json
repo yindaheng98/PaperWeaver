@@ -70,5 +70,15 @@
                 "-v"
             ]
         },
+        {
+            "name": "pytest neo4j datadst",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/datadst/neo4j",
+                "-v"
+            ]
+        },
     ]
 }
