@@ -46,9 +46,6 @@ def venue_key_from_paper(paper: Paper, info: dict) -> str | None:
     for url in urls:
         # Remove fragment (#HeZRS16)
         path = url.split("#")[0]
-        # Must start with "db/"
-        if not path.startswith("db/"):
-            continue
         # Remove .html extension
         if path.endswith(".html"):
             path = path[:-5]
