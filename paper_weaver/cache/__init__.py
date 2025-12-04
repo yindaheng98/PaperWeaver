@@ -98,6 +98,9 @@ from .impl_p2c import (  # noqa: F401
 from .impl_p2v import (  # noqa: F401
     Paper2VenuesCache,
 )
+from .impl_v2p import (  # noqa: F401
+    Venue2PapersCache,
+)
 
 # Factory functions
 from .factory import (
@@ -141,6 +144,7 @@ __all__ = [
     "Paper2ReferencesCache",
     "Paper2CitationsCache",
     "Paper2VenuesCache",
+    "Venue2PapersCache",
     "FullWeaverCache",
     # Factory
     "create_memory_weaver_cache",
