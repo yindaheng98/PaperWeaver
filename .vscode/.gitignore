@@ -1,2 +1,3 @@
-data
+data/neo4j
+data/kvrocks/db
 apoc.jar

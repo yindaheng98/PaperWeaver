@@ -12,8 +12,6 @@
             ]
         },
         {
-            // docker run --name redis --rm -it -p 6379:6379 redis:latest
-            // docker run --name kvrocks --rm -it -p 6379:6666 apache/kvrocks --bind 0.0.0.0
             "name": "pytest redis cache",
             "type": "debugpy",
             "request": "launch",
@@ -34,8 +32,6 @@
             ]
         },
         {
-            // docker run --name redis --rm -it -p 6379:6379 redis:latest
-            // docker run --name kvrocks --rm -it -p 6379:6666 apache/kvrocks --bind 0.0.0.0
             "name": "pytest redis datasrc cache",
             "type": "debugpy",
             "request": "launch",
@@ -46,8 +42,6 @@
             ]
         },
         {
-            // docker run --name redis --rm -it -p 6379:6379 redis:latest
-            // docker run --name kvrocks --rm -it -p 6379:6666 apache/kvrocks --bind 0.0.0.0
             "name": "pytest semanticscholar datasrc",
             "type": "debugpy",
             "request": "launch",
