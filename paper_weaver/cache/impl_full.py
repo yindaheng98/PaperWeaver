@@ -18,9 +18,10 @@ from .impl_p2a import Paper2AuthorsCache
 from .impl_p2c import Paper2CitationsCache
 from .impl_p2r import Paper2ReferencesCache
 from .impl_p2v import Paper2VenuesCache
+from .impl_v2p import Venue2PapersCache
 
 
-class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCache, Paper2CitationsCache, Paper2VenuesCache):
+class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCache, Paper2CitationsCache, Paper2VenuesCache, Venue2PapersCache):
     """
     Combined cache for paper operations (references, citations, authors, venues).
     """
@@ -41,6 +42,7 @@ class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCa
         pending_references_by_paper: PendingListStorageIface,
         pending_citations_by_paper: PendingListStorageIface,
         pending_venues_by_paper: PendingListStorageIface,
+        pending_papers_by_venue: PendingListStorageIface,
     ):
         ComposableCacheBase.__init__(
             self,
@@ -65,4 +67,7 @@ class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCa
         )
         self._pending_venues_by_paper_manager = PendingListManager(
             self._venue_manager._registry, pending_venues_by_paper
+        )
+        self._pending_papers_by_venue_manager = PendingListManager(
+            self._paper_manager._registry, pending_papers_by_venue
         )

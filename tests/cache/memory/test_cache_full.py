@@ -158,3 +158,27 @@ class TestFullWeaverCache:
         # Verify links committed
         for venue in venues:
             assert await cache.is_venue_link_committed(paper, venue) is True
+
+    @pytest.mark.asyncio
+    async def test_venue_to_papers_workflow(self, cache):
+        """Test full venue -> papers workflow."""
+        venue = Venue(identifiers={"issn:1234-5678"})
+        papers = [
+            Paper(identifiers={"doi:1"}),
+            Paper(identifiers={"doi:2"}),
+        ]
+
+        # Add pending papers
+        await cache.add_pending_papers_for_venue(venue, papers)
+
+        # Get pending papers
+        result = await cache.get_pending_papers_for_venue(venue)
+        assert len(result) == 2
+
+        # Commit links
+        for paper in papers:
+            await cache.commit_venue_link(paper, venue)
+
+        # Verify links committed
+        for paper in papers:
+            assert await cache.is_venue_link_committed(paper, venue) is True

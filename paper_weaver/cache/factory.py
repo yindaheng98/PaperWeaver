@@ -33,6 +33,7 @@ def create_memory_weaver_cache() -> FullWeaverCache:
         pending_references_by_paper=MemoryPendingListStorage(),
         pending_citations_by_paper=MemoryPendingListStorage(),
         pending_venues_by_paper=MemoryPendingListStorage(),
+        pending_papers_by_venue=MemoryPendingListStorage(),
     )
 
 
@@ -62,6 +63,7 @@ def create_redis_weaver_cache(
         pending_references_by_paper=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2r", expire),
         pending_citations_by_paper=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2c", expire),
         pending_venues_by_paper=RedisPendingListStorage(redis_client, f"{prefix}:pending_p2v", expire),
+        pending_papers_by_venue=RedisPendingListStorage(redis_client, f"{prefix}:pending_v2p", expire),
     )
 
 
@@ -366,6 +368,7 @@ class HybridCacheBuilder:
             pending_references_by_paper=self._pending_references_by_paper,
             pending_citations_by_paper=self._pending_citations_by_paper,
             pending_venues_by_paper=self._pending_venues_by_paper,
+            pending_papers_by_venue=self._pending_papers_by_venue,
         )
 
     def build_author2papers_cache(self) -> Author2PapersCache:
