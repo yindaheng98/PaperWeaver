@@ -12,6 +12,7 @@ from .argparse import add_weaver_args, create_weaver_from_args
 from .cache.argparse import add_cache_args, create_cache_from_args
 from .datasrc.argparse import add_datasrc_args, create_datasrc_from_args
 from .datadst.argparse import add_datadst_args, create_datadst_from_args
+from .initializer.argparse import add_initializer_args, create_initializer_from_args
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -25,6 +26,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_cache_args(parser)
     add_datasrc_args(parser)
     add_datadst_args(parser)
+    add_initializer_args(parser)
 
     # Run mode
     parser.add_argument("--max-iterations", "-n", type=int, default=0, help="Max BFS iterations (0 = until no new data)")
@@ -36,9 +38,20 @@ async def run(args: argparse.Namespace) -> None:
     cache = create_cache_from_args(args)
     datasrc = create_datasrc_from_args(args)
     datadst, driver = create_datadst_from_args(args)
-    weaver = create_weaver_from_args(args, datasrc, datadst, cache)
+    initializer = create_initializer_from_args(args)
+    weaver = create_weaver_from_args(args, datasrc, datadst, cache, initializer)
 
     try:
+        # Run initialization
+        print("[Init] Running initialization...")
+        init_count = await weaver.init()
+        print(f"[Init] Initialized with {init_count} items")
+
+        if init_count == 0:
+            print("No initial data, stopping.")
+            return
+
+        # Run BFS iterations
         iteration = 0
         while True:
             iteration += 1

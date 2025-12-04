@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import AsyncIterator
+from typing import AsyncIterator, Union
 from .dataclass import Paper, Author, Venue
 
 
@@ -22,3 +22,11 @@ class VenuesWeaverInitializerIface(metaclass=ABCMeta):
     def fetch_venues(self) -> AsyncIterator[Venue]:
         """Fetch initial venues to seed the weaver."""
         raise NotImplementedError
+
+
+# Unified type alias for all initializer interfaces
+WeaverInitializerIface = Union[
+    PapersWeaverInitializerIface,
+    AuthorsWeaverInitializerIface,
+    VenuesWeaverInitializerIface,
+]

@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import logging
 from typing import Tuple, AsyncIterator
 from .dataclass import Paper, Author, Venue, DataSrc, DataDst
+from .iface_init import WeaverInitializerIface
 
 
 class WeaverCacheIface(metaclass=ABCMeta):
@@ -67,6 +68,11 @@ class WeaverIface(metaclass=ABCMeta):
         raise ValueError("Cache is not set")
 
     @property
+    @abstractmethod
+    def initializer(self) -> WeaverInitializerIface:
+        raise ValueError("Initializer is not set")
+
+    @property
     def logger(self) -> logging.Logger:
         return logging.getLogger(self.__class__.__name__)
 
@@ -99,12 +105,19 @@ class WeaverIface(metaclass=ABCMeta):
 
 
 class SimpleWeaver(WeaverIface):
-    """A simple WeaverIface implementation with given src, dst, cache."""
+    """A simple WeaverIface implementation with given src, dst, cache, initializer."""
 
-    def __init__(self, src: DataSrc, dst: DataDst, cache: WeaverCacheIface):
+    def __init__(
+        self,
+        src: DataSrc,
+        dst: DataDst,
+        cache: WeaverCacheIface,
+        initializer: WeaverInitializerIface
+    ):
         self._src = src
         self._dst = dst
         self._cache = cache
+        self._initializer = initializer
 
     @property
     def src(self) -> DataSrc:
@@ -117,3 +130,7 @@ class SimpleWeaver(WeaverIface):
     @property
     def cache(self) -> WeaverCacheIface:
         return self._cache
+
+    @property
+    def initializer(self) -> WeaverInitializerIface:
+        return self._initializer

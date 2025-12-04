@@ -9,6 +9,7 @@ import argparse
 
 from .dataclass import DataSrc, DataDst
 from .cache import FullWeaverCache
+from .iface_init import WeaverInitializerIface
 from .weaver_a2p2v import Author2Paper2VenueWeaver
 
 
@@ -21,11 +22,17 @@ def create_weaver_from_args(
     args: argparse.Namespace,
     src: DataSrc,
     dst: DataDst,
-    cache: FullWeaverCache
+    cache: FullWeaverCache,
+    initializer: WeaverInitializerIface
 ):
     """Create a Weaver from parsed command-line arguments."""
     match args.weaver_type:
         case "a2p2v":
-            return Author2Paper2VenueWeaver(src=src, dst=dst, cache=cache)
+            return Author2Paper2VenueWeaver(
+                src=src,
+                dst=dst,
+                cache=cache,
+                initializer=initializer
+            )
         case _:
             raise ValueError(f"Unknown weaver type: {args.weaver_type}")

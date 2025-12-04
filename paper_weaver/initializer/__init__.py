@@ -11,9 +11,7 @@ from .dblp import (
 )
 from .argparse import (
     add_initializer_args,
-    create_papers_initializer_from_args,
-    create_authors_initializer_from_args,
-    create_venues_initializer_from_args,
+    create_initializer_from_args,
 )
 
 __all__ = [
@@ -23,7 +21,5 @@ __all__ = [
     "DBLPVenuesInitializer",
     # Argparse
     "add_initializer_args",
-    "create_papers_initializer_from_args",
-    "create_authors_initializer_from_args",
-    "create_venues_initializer_from_args",
+    "create_initializer_from_args",
 ]

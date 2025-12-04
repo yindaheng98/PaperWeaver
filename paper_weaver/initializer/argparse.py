@@ -7,11 +7,7 @@ Supports:
 
 import argparse
 
-from ..iface_init import (
-    PapersWeaverInitializerIface,
-    AuthorsWeaverInitializerIface,
-    VenuesWeaverInitializerIface,
-)
+from ..iface_init import WeaverInitializerIface
 from .dblp import (
     DBLPPapersInitializer,
     DBLPAuthorsInitializer,
@@ -27,50 +23,46 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
         default="dblp",
         help="Initializer type (default: dblp)"
     )
+    parser.add_argument(
+        "--init-mode",
+        choices=["papers", "authors", "venues"],
+        default="authors",
+        help="Initialization mode: papers, authors, or venues (default: authors)"
+    )
 
     # DBLP specific
     parser.add_argument(
-        "--dblp-record-keys",
+        "--init-dblp-record-keys",
         nargs="+",
         default=[],
         help="DBLP record keys to initialize papers (e.g., conf/cvpr/HeZRS16 journals/pami/HeZRS16)"
     )
     parser.add_argument(
-        "--dblp-pids",
+        "--init-dblp-pids",
         nargs="+",
         default=[],
         help="DBLP person IDs to initialize authors (e.g., h/KaimingHe 74/1552)"
     )
     parser.add_argument(
-        "--dblp-venue-keys",
+        "--init-dblp-venue-keys",
         nargs="+",
         default=[],
         help="DBLP venue keys to initialize venues (e.g., db/conf/cvpr/cvpr2016 db/journals/pami/pami45)"
     )
 
 
-def create_papers_initializer_from_args(args: argparse.Namespace) -> PapersWeaverInitializerIface:
-    """Create a papers initializer from parsed command-line arguments."""
+def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerIface:
+    """Create an initializer from parsed command-line arguments."""
     match args.init_type:
         case "dblp":
-            return DBLPPapersInitializer(list(args.dblp_record_keys))
-        case _:
-            raise ValueError(f"Unknown initializer type: {args.init_type}")
-
-
-def create_authors_initializer_from_args(args: argparse.Namespace) -> AuthorsWeaverInitializerIface:
-    """Create an authors initializer from parsed command-line arguments."""
-    match args.init_type:
-        case "dblp":
-            return DBLPAuthorsInitializer(list(args.dblp_pids))
-        case _:
-            raise ValueError(f"Unknown initializer type: {args.init_type}")
-
-
-def create_venues_initializer_from_args(args: argparse.Namespace) -> VenuesWeaverInitializerIface:
-    """Create a venues initializer from parsed command-line arguments."""
-    match args.init_type:
-        case "dblp":
-            return DBLPVenuesInitializer(list(args.dblp_venue_keys))
+            match args.init_mode:
+                case "papers":
+                    return DBLPPapersInitializer(list(args.init_dblp_record_keys))
+                case "authors":
+                    return DBLPAuthorsInitializer(list(args.init_dblp_pids))
+                case "venues":
+                    return DBLPVenuesInitializer(list(args.init_dblp_venue_keys))
+                case _:
+                    raise ValueError(f"Unknown init mode: {args.init_mode}")
         case _:
             raise ValueError(f"Unknown initializer type: {args.init_type}")
