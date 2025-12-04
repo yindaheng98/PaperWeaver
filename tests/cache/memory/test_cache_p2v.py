@@ -129,4 +129,3 @@ class TestPaper2VenuesCache:
         # Should have all identifiers
         assert "issn:1234-5678" in venue2.identifiers
         assert "dblp:conf/venue" in venue2.identifiers
-

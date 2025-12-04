@@ -239,7 +239,7 @@ class TestCachedAsyncPool:
             await fetch_proceed.wait()
             return f"value_{fetch_count}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # Start multiple concurrent requests for the same key
         task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser))
@@ -277,7 +277,7 @@ class TestCachedAsyncPool:
         fetcher2 = await make_fetcher("key2")
         fetcher3 = await make_fetcher("key3")
 
-        parser = lambda x: x
+        def parser(x): return x
 
         results = await asyncio.gather(
             pool.get_or_fetch("key1", fetcher1, parser),
@@ -313,7 +313,7 @@ class TestCachedAsyncPool:
 
             return f"value_{key}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # Launch more tasks than semaphore allows
         tasks = [
@@ -362,7 +362,7 @@ class TestCachedAsyncPool:
             fetch_count += 1
             return f"value_{fetch_count}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # First fetch
         result1 = await pool.get_or_fetch("key1", fetcher, parser)
@@ -436,7 +436,7 @@ class TestCachedAsyncPoolEdgeCases:
             await asyncio.sleep(0.02)
             return f"value_{key}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # Mix of same and different keys
         tasks = [
@@ -465,7 +465,7 @@ class TestCachedAsyncPoolEdgeCases:
                 return value
             return fetcher
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # First batch of operations
         for i in range(5):
@@ -673,7 +673,7 @@ class TestCachedAsyncPoolExpiration:
             fetch_count += 1
             return f"value_{fetch_count}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # First fetch
         result1 = await pool.get_or_fetch("key1", fetcher, parser, expire=1)
@@ -716,7 +716,7 @@ class TestCachedAsyncPoolExpiration:
                 return value
             return inner
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # Set different expiration times
         await pool.get_or_fetch("short", await fetcher("short_value"), parser, expire=1)
@@ -761,7 +761,7 @@ class TestCachedAsyncPoolExpiration:
             await fetch_proceed.wait()
             return f"value_{fetch_count}"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # Start multiple concurrent requests for the same key with expiration
         task1 = asyncio.create_task(pool.get_or_fetch("key1", slow_fetcher, parser, expire=60))

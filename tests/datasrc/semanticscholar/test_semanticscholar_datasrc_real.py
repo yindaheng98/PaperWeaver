@@ -59,17 +59,17 @@ class TestRealPaperAPI:
     async def test_get_paper_info(self, datasrc):
         """Test fetching real paper info."""
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             updated_paper, info = await datasrc.get_paper_info(paper)
-            
+
             # Verify we got data
             assert "paperId" in info
             assert "title" in info
-            
+
             # Verify identifiers are updated
             assert len(updated_paper.identifiers) > 0
-            
+
             print(f"\n✓ Paper: {info['title']}")
             print(f"  Year: {info.get('year', 'N/A')}")
             print(f"  Identifiers: {updated_paper.identifiers}")
@@ -80,20 +80,20 @@ class TestRealPaperAPI:
     async def test_get_authors_by_paper(self, datasrc):
         """Test fetching real authors for a paper."""
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             authors = await datasrc.get_authors_by_paper(paper)
-            
+
             # Should have at least one author
             assert len(authors) > 0
-            
+
             # Check author identifiers
             author_ids = set()
             for author in authors:
                 for ident in author.identifiers:
                     if ident.startswith("ss-author:"):
                         author_ids.add(ident[10:])
-            
+
             print(f"\n✓ Found {len(authors)} authors")
             print(f"  Author IDs: {author_ids}")
         except ValueError as e:
@@ -103,10 +103,10 @@ class TestRealPaperAPI:
     async def test_get_venues_by_paper(self, datasrc):
         """Test fetching real venues for a paper."""
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             venues = await datasrc.get_venues_by_paper(paper)
-            
+
             # May or may not have venue info
             print(f"\n✓ Found {len(venues)} venues")
             for venue in venues:
@@ -118,13 +118,13 @@ class TestRealPaperAPI:
     async def test_get_references_by_paper(self, datasrc):
         """Test fetching real references for a paper."""
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             references = await datasrc.get_references_by_paper(paper)
-            
+
             # Paper should have references
             assert len(references) >= 0
-            
+
             print(f"\n✓ Found {len(references)} references")
             # Print first 3 references
             for i, ref in enumerate(references[:3]):
@@ -136,13 +136,13 @@ class TestRealPaperAPI:
     async def test_get_citations_by_paper(self, datasrc):
         """Test fetching real citations for a paper."""
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             citations = await datasrc.get_citations_by_paper(paper)
-            
+
             # Paper should have citations
             assert len(citations) >= 0
-            
+
             print(f"\n✓ Found {len(citations)} citations (first page)")
             # Print first 3 citations
             for i, cite in enumerate(citations[:3]):
@@ -158,17 +158,17 @@ class TestRealAuthorAPI:
     async def test_get_author_info(self, datasrc):
         """Test fetching real author info."""
         author = Author(identifiers={f"ss-author:{TEST_AUTHOR_ID}"})
-        
+
         try:
             updated_author, info = await datasrc.get_author_info(author)
-            
+
             # Verify we got data
             assert "authorId" in info
             assert info["authorId"] == TEST_AUTHOR_ID
-            
+
             # Verify name exists
             assert "name" in info
-            
+
             print(f"\n✓ Author: {info['name']}")
             print(f"  Identifiers: {updated_author.identifiers}")
         except ValueError as e:
@@ -178,13 +178,13 @@ class TestRealAuthorAPI:
     async def test_get_papers_by_author(self, datasrc):
         """Test fetching real papers for an author."""
         author = Author(identifiers={f"ss-author:{TEST_AUTHOR_ID}"})
-        
+
         try:
             papers = await datasrc.get_papers_by_author(author)
-            
+
             # Author should have papers
             assert len(papers) > 0
-            
+
             print(f"\n✓ Found {len(papers)} papers by author")
             # Print first 5 papers
             for i, p in enumerate(papers[:5]):
@@ -200,18 +200,18 @@ class TestRealWorkflow:
     async def test_author_to_papers_workflow(self, datasrc):
         """Test getting an author's papers."""
         print("\n=== Author to Papers Workflow ===")
-        
+
         author = Author(identifiers={f"ss-author:{TEST_AUTHOR_ID}"})
-        
+
         try:
             # 1. Get author info
             updated_author, info = await datasrc.get_author_info(author)
             print(f"\n1. Author: {info.get('name', 'Unknown')}")
-            
+
             # 2. Get author's papers
             papers = await datasrc.get_papers_by_author(updated_author)
             print(f"\n2. Papers by author: {len(papers)}")
-            
+
             assert len(papers) > 0
             print("\n✓ Workflow completed!")
         except ValueError as e:
@@ -221,18 +221,18 @@ class TestRealWorkflow:
     async def test_paper_authors_workflow(self, datasrc):
         """Test getting a paper's authors."""
         print("\n=== Paper Authors Workflow ===")
-        
+
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             # Get authors for paper
             authors = await datasrc.get_authors_by_paper(paper)
             print(f"\n1. Found {len(authors)} authors for paper")
-            
+
             for i, author in enumerate(authors[:3]):
                 author_id = next((ident[10:] for ident in author.identifiers if ident.startswith("ss-author:")), "?")
                 print(f"   - Author {i+1}: {author_id}")
-            
+
             assert len(authors) > 0
             print("\n✓ Workflow completed!")
         except ValueError as e:
@@ -242,18 +242,18 @@ class TestRealWorkflow:
     async def test_paper_references_workflow(self, datasrc):
         """Test getting a paper's references."""
         print("\n=== Paper References Workflow ===")
-        
+
         paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}"})
-        
+
         try:
             # Get references for paper
             references = await datasrc.get_references_by_paper(paper)
             print(f"\n1. Found {len(references)} references")
-            
+
             for i, ref in enumerate(references[:3]):
                 ref_id = next((ident[3:] for ident in ref.identifiers if ident.startswith("ss:")), "?")
                 print(f"   - Ref {i+1}: {ref_id[:20]}...")
-            
+
             print("\n✓ Workflow completed!")
         except ValueError as e:
             pytest.skip(f"API request failed (possibly rate limited): {e}")

@@ -144,4 +144,3 @@ class Neo4jDataDst(DataDst):
             venue: The venue where the paper was published
         """
         await link_paper_to_venue(self._session, paper, venue)
-

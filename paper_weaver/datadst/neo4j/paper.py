@@ -79,4 +79,3 @@ async def link_paper_reference(
         )
 
     await session.execute_write(_link)
-

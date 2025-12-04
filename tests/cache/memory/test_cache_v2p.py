@@ -129,4 +129,3 @@ class TestVenue2PapersCache:
         # Should have all identifiers
         assert "doi:123" in paper2.identifiers
         assert "arxiv:456" in paper2.identifiers
-

@@ -289,4 +289,3 @@ async def create_relationship(
         MERGE (a)-[r:{rel_type}]->(b)
     """
     await tx.run(query, from_id=from_id, to_id=to_id)
-

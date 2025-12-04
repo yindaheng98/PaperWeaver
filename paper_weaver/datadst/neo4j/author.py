@@ -55,4 +55,3 @@ async def link_author_to_paper(
         )
 
     await session.execute_write(_link)
-

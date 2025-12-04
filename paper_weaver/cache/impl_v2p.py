@@ -64,4 +64,3 @@ class Venue2PapersCache(VenueLinkCache, Venue2PapersWeaverCacheIface):
         # Update paper identifiers with merged sets
         for paper, ids in zip(papers, registered_sets):
             paper.identifiers = ids
-

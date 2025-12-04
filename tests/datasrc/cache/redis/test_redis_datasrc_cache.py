@@ -430,7 +430,7 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return "fetched_value"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
         redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
@@ -462,7 +462,7 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return "fresh_value"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
         redis_result = await redis_pool.get_or_fetch("key1", redis_fetcher, parser)
@@ -480,7 +480,7 @@ class TestCachedAsyncPoolWithRedis:
         async def fetcher():
             return "fetched_value"
 
-        parser = lambda x: x
+        def parser(x): return x
 
         await memory_pool.get_or_fetch("key1", fetcher, parser, expire=1)
         await redis_pool.get_or_fetch("key1", fetcher, parser, expire=1)
@@ -514,7 +514,7 @@ class TestCachedAsyncPoolWithRedis:
             redis_fetch_count += 1
             return None
 
-        parser = lambda x: x
+        def parser(x): return x
 
         # First fetch
         mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
@@ -553,7 +553,7 @@ class TestCachedAsyncPoolWithRedis:
             return "fetched_value"
 
         # Parser returns None
-        parser = lambda x: None
+        def parser(x): return None
 
         # First fetch
         mem_result = await memory_pool.get_or_fetch("key1", mem_fetcher, parser)
@@ -586,7 +586,7 @@ class TestCachedAsyncPoolWithRedis:
             return '{"key": "value"}'
 
         # Parser transforms to dict
-        parser = lambda x: {"parsed": x}
+        def parser(x): return {"parsed": x}
 
         mem_result = await memory_pool.get_or_fetch("key1", fetcher, parser)
         redis_result = await redis_pool.get_or_fetch("key2", fetcher, parser)
@@ -607,7 +607,7 @@ class TestCachedAsyncPoolWithRedis:
             return "fresh_value"
 
         # Parser should be applied to cached value
-        parser = lambda x: x.upper()
+        def parser(x): return x.upper()
 
         mem_result = await memory_pool.get_or_fetch("key1", fetcher, parser)
         redis_result = await redis_pool.get_or_fetch("key1", fetcher, parser)
@@ -648,4 +648,3 @@ class TestRedisDataSrcCacheCompliance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

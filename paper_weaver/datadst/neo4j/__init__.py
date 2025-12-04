@@ -36,4 +36,3 @@ __all__ = [
     "save_venue",
     "link_paper_to_venue",
 ]
-

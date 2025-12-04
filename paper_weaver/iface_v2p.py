@@ -101,4 +101,3 @@ class Venue2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def bfs_once(self) -> int:
         return await self.all_venue_to_papers()
-

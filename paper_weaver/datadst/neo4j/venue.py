@@ -55,4 +55,3 @@ async def link_paper_to_venue(
         )
 
     await session.execute_write(_link)
-
