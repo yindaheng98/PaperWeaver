@@ -84,7 +84,7 @@ async def bfs_cached_step(
 
     # Step 3: Process each child
     async def process_child(child: C):
-        n_new_child, n_new_link = 0
+        n_new_child, n_new_link = 0, 0
         child, child_info = await cache_get_child_info(child)
         if child_info is None:
             logger.info(f"[Child] Cache miss, fetching info: {child}")
