@@ -9,7 +9,10 @@ Features:
 - Merges nodes with overlapping identifiers into one
 - Updates existing nodes by adding new identifiers and merging info
 - Creates relationships between nodes (AUTHORED, PUBLISHED_IN, CITES)
+- Ensures session operations are serialized via asyncio.Lock
 """
+
+import asyncio
 
 from neo4j import AsyncSession
 
@@ -46,11 +49,17 @@ class Neo4jDataDst(DataDst):
             session: Neo4j async session for database operations
         """
         self._session = session
+        self._lock = asyncio.Lock()
 
     @property
     def session(self) -> AsyncSession:
         """Get the Neo4j session."""
         return self._session
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        """Get the session lock for concurrency control."""
+        return self._lock
 
     # ==================== Paper Methods ====================
 
@@ -65,7 +74,8 @@ class Neo4jDataDst(DataDst):
             paper: Paper object with identifiers
             info: Info dict to store as node properties
         """
-        await save_paper(self._session, paper, info)
+        async with self._lock:
+            await save_paper(self._session, paper, info)
 
     async def link_citation(self, paper: Paper, citation: Paper) -> None:
         """
@@ -77,7 +87,8 @@ class Neo4jDataDst(DataDst):
             paper: The paper being cited
             citation: The paper that cites this paper
         """
-        await link_paper_citation(self._session, paper, citation)
+        async with self._lock:
+            await link_paper_citation(self._session, paper, citation)
 
     async def link_reference(self, paper: Paper, reference: Paper) -> None:
         """
@@ -89,7 +100,8 @@ class Neo4jDataDst(DataDst):
             paper: The paper that cites
             reference: The paper being cited (referenced)
         """
-        await link_paper_reference(self._session, paper, reference)
+        async with self._lock:
+            await link_paper_reference(self._session, paper, reference)
 
     # ==================== Author Methods ====================
 
@@ -104,7 +116,8 @@ class Neo4jDataDst(DataDst):
             author: Author object with identifiers
             info: Info dict to store as node properties
         """
-        await save_author(self._session, author, info)
+        async with self._lock:
+            await save_author(self._session, author, info)
 
     async def link_author(self, paper: Paper, author: Author) -> None:
         """
@@ -116,7 +129,8 @@ class Neo4jDataDst(DataDst):
             paper: The paper
             author: The author who wrote the paper
         """
-        await link_author_to_paper(self._session, paper, author)
+        async with self._lock:
+            await link_author_to_paper(self._session, paper, author)
 
     # ==================== Venue Methods ====================
 
@@ -131,7 +145,8 @@ class Neo4jDataDst(DataDst):
             venue: Venue object with identifiers
             info: Info dict to store as node properties
         """
-        await save_venue(self._session, venue, info)
+        async with self._lock:
+            await save_venue(self._session, venue, info)
 
     async def link_venue(self, paper: Paper, venue: Venue) -> None:
         """
@@ -143,4 +158,5 @@ class Neo4jDataDst(DataDst):
             paper: The paper
             venue: The venue where the paper was published
         """
-        await link_paper_to_venue(self._session, paper, venue)
+        async with self._lock:
+            await link_paper_to_venue(self._session, paper, venue)
