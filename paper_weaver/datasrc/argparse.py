@@ -16,7 +16,7 @@ from .dblp import DBLPDataSrc
 
 def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     """Add DataSrc-related command-line arguments."""
-    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp"], default="semanticscholar", help="DataSrc type (default: semanticscholar)")
+    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp"], default="dblp", help="DataSrc type (default: dblp)")
 
     # DataSrc cache
     parser.add_argument("--datasrc-cache-mode", choices=["memory", "redis"], default="memory", help="DataSrc cache backend (default: memory)")

@@ -80,5 +80,21 @@
                 "-v"
             ]
         },
+        {
+            "name": "run",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "paper_weaver",
+            "args": [
+                "--weaver-type=a2p2v",
+                "--cache-mode=redis",
+                "--cache-redis-url=redis://localhost:6379",
+                "--datasrc-type=dblp",
+                "--datasrc-cache-mode=redis",
+                "--datasrc-redis-url=redis://localhost:6379",
+                "--datadst-type=neo4j",
+                "--max-iterations=3",
+            ]
+        },
     ]
 }

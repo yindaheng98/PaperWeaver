@@ -9,7 +9,7 @@ class Author2Paper2VenueCache(Author2PapersWeaverCacheIface, Paper2AuthorsWeaver
     pass
 
 
-class Author2Paper2VenueWeaver(Author2PapersWeaverIface, Paper2AuthorsWeaverIface, Paper2VenuesWeaverIface, SimpleWeaver):
+class Author2Paper2VenueWeaver(SimpleWeaver, Author2PapersWeaverIface, Paper2AuthorsWeaverIface, Paper2VenuesWeaverIface):
 
     def __init__(self, src: DataSrc, dst: DataDst, cache: Author2Paper2VenueCache):
         super().__init__(src=src, dst=dst, cache=cache)
