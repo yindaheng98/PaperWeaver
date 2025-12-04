@@ -61,6 +61,7 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
             save_link=self.dst.link_citation,
             is_link_committed=self.cache.is_citation_link_committed,
             commit_link=self.cache.commit_citation_link,
+            logger=self.logger,
         )
 
     async def all_paper_to_citations(self) -> int:

@@ -62,6 +62,7 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
             save_link=lambda author, paper: self.dst.link_author(paper, author),
             is_link_committed=lambda author, paper: self.cache.is_author_link_committed(paper, author),
             commit_link=lambda author, paper: self.cache.commit_author_link(paper, author),
+            logger=self.logger,
         )
 
     async def all_author_to_papers(self) -> int:

@@ -61,6 +61,7 @@ class Paper2VenuesWeaverIface(WeaverIface, metaclass=ABCMeta):
             save_link=self.dst.link_venue,
             is_link_committed=self.cache.is_venue_link_committed,
             commit_link=self.cache.commit_venue_link,
+            logger=self.logger,
         )
 
     async def all_paper_to_venues(self) -> int:
