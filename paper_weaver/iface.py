@@ -71,13 +71,22 @@ class WeaverIface(metaclass=ABCMeta):
         return logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
+    async def init(self) -> int:
+        """Initialize the weaver before BFS starts. Return number of new entities fetched."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def bfs_once(self) -> int:
         """Perform one BFS iteration, return number of new entities fetched."""
         raise NotImplementedError
 
     async def bfs(self, max_iterations: int = 10) -> int:
         """Perform BFS for a number of iterations, return total number of new entities fetched."""
-        total_new = 0
+        total_new = await self.init()
+        if total_new == 0:
+            self.logger.info("No new entities fetched during initialization, stopping BFS.")
+            return total_new
+        self.logger.info(f"Initialization completed with {total_new} new entities fetched.")
         for iteration in range(max_iterations):
             self.logger.info(f"Starting BFS iteration {iteration + 1}")
             new_count = await self.bfs_once()
