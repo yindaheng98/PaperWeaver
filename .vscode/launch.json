@@ -89,9 +89,8 @@
                 "--datasrc-redis-url=redis://localhost:6379",
                 "--datadst-type=neo4j",
                 "--max-iterations=3",
-                "--init-type=dblp",
-                "--init-mode=venues",
-                "--init-dblp-venue-keys=db/conf/cvpr/cvpr2016",
+                "--init=dblp-venue-index",
+                "--init-dblp-venue-index-keys=db/conf/cvpr",
                 "--datasrc-max-concurrent=2",
             ]
         },
