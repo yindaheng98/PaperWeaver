@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-weaver"
+version = "1.0.0"
+description = "Weave academic paper data from various sources (DBLP, Semantic Scholar) into graph databases."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "yindaheng98", email = "yindaheng98@gmail.com" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Database",
+]
+keywords = [
+    "academic",
+    "paper",
+    "citation",
+    "dblp",
+    "semantic-scholar",
+    "neo4j",
+    "graph-database",
+]
+urls = { Homepage = "https://github.com/yindaheng98/PaperWeaver" }
+requires-python = ">=3.10"
+dependencies = ["aiohttp>=3.8.0", "neo4j>=5.0.0", "redis>=5.0.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0"]
+
+[project.scripts]
+paper-weaver = "paper_weaver.__main__:main"
+
+# --- Setuptools-specific tables ---------------------------------------------
+
+[tool.setuptools]
+packages = { find = { include = ["paper_weaver*"] } }
+
+[tool.setuptools.package-dir]
+"" = "."
