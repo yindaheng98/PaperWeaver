@@ -13,6 +13,7 @@ from typing import Tuple
 from .dataclass import Paper, Venue
 from .iface import WeaverIface
 from .iface_link import VenueLinkWeaverCacheIface
+from .iface_init import VenuesWeaverInitializerIface
 
 
 class Venue2PapersWeaverCacheIface(VenueLinkWeaverCacheIface, metaclass=ABCMeta):
@@ -101,3 +102,20 @@ class Venue2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def bfs_once(self) -> int:
         return await self.all_venue_to_papers()
+
+    @property
+    @abstractmethod
+    def initializer(self) -> VenuesWeaverInitializerIface:
+        """Initializer called before BFS starts."""
+        pass
+
+    async def init(self) -> int:
+        tasks = []
+        async for venue in self.initializer.fetch_venues():
+            tasks.append(self.venue_to_papers(venue))
+        self.logger.info(f"Fetching papers from {len(tasks)} new venues")
+        state = await asyncio.gather(*tasks)
+        venue_succ_count, venue_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
+        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
+        self.logger.info(f"Found {paper_succ_count} new papers from {venue_succ_count} venues. {paper_fail_count} papers fetch failed. {venue_fail_count} venues fetch failed.")
+        return paper_succ_count
