@@ -42,31 +42,9 @@ async def run(args: argparse.Namespace) -> None:
     weaver = create_weaver_from_args(args, datasrc, datadst, cache, initializer)
 
     try:
-        # Run initialization
-        print("[Init] Running initialization...")
-        init_count = await weaver.init()
-        print(f"[Init] Initialized with {init_count} items")
-
-        if init_count == 0:
-            print("No initial data, stopping.")
-            return
-
-        # Run BFS iterations
-        iteration = 0
-        while True:
-            iteration += 1
-            print(f"[Iteration {iteration}] Running bfs_once...")
-
-            count = await weaver.bfs_once()
-            print(f"[Iteration {iteration}] Processed {count} items")
-
-            if count == 0:
-                print("No new data, stopping.")
-                break
-
-            if args.max_iterations > 0 and iteration >= args.max_iterations:
-                print(f"Reached max iterations ({args.max_iterations}), stopping.")
-                break
+        max_iter = args.max_iterations if args.max_iterations > 0 else 10000
+        total = await weaver.bfs(max_iterations=max_iter)
+        print(f"[Done] Total {total} items processed.")
     finally:
         await driver.close()
 
