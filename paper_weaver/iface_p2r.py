@@ -43,8 +43,8 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
     def cache(self) -> Paper2ReferencesWeaverCacheIface:
         raise ValueError("Cache is not set")
 
-    async def paper_to_references(self, paper: Paper) -> Tuple[int, int] | None:
-        """Process one paper: fetch info and references, write to cache and dst. Return number of new references fetched and number of failed references, or None if failed."""
+    async def paper_to_references(self, paper: Paper) -> Tuple[int, int, int] | None:
+        """Process one paper: fetch info and references, write to cache and dst. Return (n_new_refs, n_new_links, n_failed) or None if failed."""
         return await bfs_cached_step(
             parent=paper,
             load_parent_info=lambda p: p.get_info(self.src),
@@ -68,12 +68,15 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for paper in self.cache.iterate_papers():
             tasks.append(self.paper_to_references(paper))
-        self.logger.info(f"Fetching references from {len(tasks)} new papers")
-        state = await asyncio.gather(*tasks)
-        paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        reference_succ_count, reference_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {reference_succ_count} new references from {paper_succ_count} papers. {reference_fail_count} references fetch failed. {paper_fail_count} papers fetch failed.")
-        return reference_succ_count
+        self.logger.info(f"[P2R] Processing {len(tasks)} papers")
+        results = await asyncio.gather(*tasks)
+        n_paper_succ = sum(1 for r in results if r is not None)
+        n_paper_fail = sum(1 for r in results if r is None)
+        n_new_ref = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_ref_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[P2R] Done: {n_paper_succ} papers OK, {n_paper_fail} papers failed | {n_new_ref} new refs, {n_new_link} new links, {n_ref_fail} refs failed")
+        return n_new_ref
 
     async def bfs_once(self) -> int:
         return await self.all_paper_to_references()
@@ -88,9 +91,12 @@ class Paper2ReferencesWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for paper in self.initializer.fetch_papers():
             tasks.append(self.paper_to_references(paper))
-        self.logger.info(f"Fetching references from {len(tasks)} new papers")
-        state = await asyncio.gather(*tasks)
-        paper_succ_count, paper_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        reference_succ_count, reference_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {reference_succ_count} new references from {paper_succ_count} papers. {reference_fail_count} references fetch failed. {paper_fail_count} papers fetch failed.")
-        return reference_succ_count
+        self.logger.info(f"[P2R Init] Processing {len(tasks)} papers")
+        results = await asyncio.gather(*tasks)
+        n_paper_succ = sum(1 for r in results if r is not None)
+        n_paper_fail = sum(1 for r in results if r is None)
+        n_new_ref = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_ref_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[P2R Init] Done: {n_paper_succ} papers OK, {n_paper_fail} papers failed | {n_new_ref} new refs, {n_new_link} new links, {n_ref_fail} refs failed")
+        return n_new_ref

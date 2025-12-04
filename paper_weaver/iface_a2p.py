@@ -43,8 +43,8 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
     def cache(self) -> Author2PapersWeaverCacheIface:
         raise ValueError("Cache is not set")
 
-    async def author_to_papers(self, author: Author) -> Tuple[int, int] | None:
-        """Process one author: fetch info and papers, write to cache and dst. Return number of new papers fetched and number of failed papers, or None if failed."""
+    async def author_to_papers(self, author: Author) -> Tuple[int, int, int] | None:
+        """Process one author: fetch info and papers, write to cache and dst. Return (n_new_papers, n_new_links, n_failed) or None if failed."""
         return await bfs_cached_step(
             parent=author,
             load_parent_info=lambda a: a.get_info(self.src),
@@ -69,12 +69,15 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for author in self.cache.iterate_authors():
             tasks.append(self.author_to_papers(author))
-        self.logger.info(f"Fetching papers from {len(tasks)} new authors")
-        state = await asyncio.gather(*tasks)
-        author_succ_count, author_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {paper_succ_count} new papers from {author_succ_count} authors. {paper_fail_count} papers fetch failed. {author_fail_count} authors fetch failed.")
-        return paper_succ_count
+        self.logger.info(f"[A2P] Processing {len(tasks)} authors")
+        results = await asyncio.gather(*tasks)
+        n_author_succ = sum(1 for r in results if r is not None)
+        n_author_fail = sum(1 for r in results if r is None)
+        n_new_paper = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_paper_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[A2P] Done: {n_author_succ} authors OK, {n_author_fail} authors failed | {n_new_paper} new papers, {n_new_link} new links, {n_paper_fail} papers failed")
+        return n_new_paper
 
     async def bfs_once(self) -> int:
         return await self.all_author_to_papers()
@@ -89,9 +92,12 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for author in self.initializer.fetch_authors():
             tasks.append(self.author_to_papers(author))
-        self.logger.info(f"Fetching papers from {len(tasks)} new authors")
-        state = await asyncio.gather(*tasks)
-        author_succ_count, author_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {paper_succ_count} new papers from {author_succ_count} authors. {paper_fail_count} papers fetch failed. {author_fail_count} authors fetch failed.")
-        return paper_succ_count
+        self.logger.info(f"[A2P Init] Processing {len(tasks)} authors")
+        results = await asyncio.gather(*tasks)
+        n_author_succ = sum(1 for r in results if r is not None)
+        n_author_fail = sum(1 for r in results if r is None)
+        n_new_paper = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_paper_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[A2P Init] Done: {n_author_succ} authors OK, {n_author_fail} authors failed | {n_new_paper} new papers, {n_new_link} new links, {n_paper_fail} papers failed")
+        return n_new_paper

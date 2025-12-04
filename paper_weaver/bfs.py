@@ -84,7 +84,7 @@ async def bfs_cached_step(
 
     # Step 3: Process each child
     async def process_child(child: C):
-        n_new = 0
+        n_new_child, n_new_link = 0
         child, child_info = await cache_get_child_info(child)
         if child_info is None:
             logger.info(f"[Child] Cache miss, fetching info: {child}")
@@ -95,7 +95,7 @@ async def bfs_cached_step(
             await save_child_info(child, child_info)
             await cache_set_child_info(child, child_info)
             logger.debug(f"[Child] Fetched and cached info: {child}")
-            n_new = 1
+            n_new_child = 1
         else:
             logger.debug(f"[Child] Cache hit: {child}")
 
@@ -104,15 +104,17 @@ async def bfs_cached_step(
             await save_link(parent, child)
             await commit_link(parent, child)
             logger.info(f"[Link] Committed: {parent} -> {child}")
+            n_new_link = 1
         else:
             logger.debug(f"[Link] Already committed: {parent} -> {child}")
 
-        return n_new
+        return n_new_child, n_new_link
 
     results = await asyncio.gather(*[process_child(child) for child in children])
-    n_new_children = sum([r for r in results if r is not None])
+    n_new_child = sum([r[0] for r in results if r is not None])
+    n_new_link = sum([r[1] for r in results if r is not None])
     n_failed = sum([1 for r in results if r is None])
 
-    logger.info(f"[Summary] Parent {parent}: {n_new_children} new children, {n_failed} failed")
+    logger.info(f"[Summary] Parent {parent}: {n_new_child} new children, {n_new_link} new links, {n_failed} failed")
 
-    return n_new_children, n_failed
+    return n_new_child, n_new_link, n_failed

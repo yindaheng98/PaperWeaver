@@ -43,8 +43,8 @@ class Venue2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
     def cache(self) -> Venue2PapersWeaverCacheIface:
         raise ValueError("Cache is not set")
 
-    async def venue_to_papers(self, venue: Venue) -> Tuple[int, int] | None:
-        """Process one venue: fetch info and papers, write to cache and dst. Return number of new papers fetched and number of failed papers, or None if failed."""
+    async def venue_to_papers(self, venue: Venue) -> Tuple[int, int, int] | None:
+        """Process one venue: fetch info and papers, write to cache and dst. Return (n_new_papers, n_new_links, n_failed) or None if failed."""
         return await bfs_cached_step(
             parent=venue,
             load_parent_info=lambda v: v.get_info(self.src),
@@ -69,12 +69,15 @@ class Venue2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for venue in self.cache.iterate_venues():
             tasks.append(self.venue_to_papers(venue))
-        self.logger.info(f"Fetching papers from {len(tasks)} new venues")
-        state = await asyncio.gather(*tasks)
-        venue_succ_count, venue_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {paper_succ_count} new papers from {venue_succ_count} venues. {paper_fail_count} papers fetch failed. {venue_fail_count} venues fetch failed.")
-        return paper_succ_count
+        self.logger.info(f"[V2P] Processing {len(tasks)} venues")
+        results = await asyncio.gather(*tasks)
+        n_venue_succ = sum(1 for r in results if r is not None)
+        n_venue_fail = sum(1 for r in results if r is None)
+        n_new_paper = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_paper_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[V2P] Done: {n_venue_succ} venues OK, {n_venue_fail} venues failed | {n_new_paper} new papers, {n_new_link} new links, {n_paper_fail} papers failed")
+        return n_new_paper
 
     async def bfs_once(self) -> int:
         return await self.all_venue_to_papers()
@@ -89,9 +92,12 @@ class Venue2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
         tasks = []
         async for venue in self.initializer.fetch_venues():
             tasks.append(self.venue_to_papers(venue))
-        self.logger.info(f"Fetching papers from {len(tasks)} new venues")
-        state = await asyncio.gather(*tasks)
-        venue_succ_count, venue_fail_count = sum([1 for s in state if s is not None]), sum([1 for s in state if s is None])
-        paper_succ_count, paper_fail_count = sum([s[0] for s in state if s is not None]), sum([s[1] for s in state if s is not None])
-        self.logger.info(f"Found {paper_succ_count} new papers from {venue_succ_count} venues. {paper_fail_count} papers fetch failed. {venue_fail_count} venues fetch failed.")
-        return paper_succ_count
+        self.logger.info(f"[V2P Init] Processing {len(tasks)} venues")
+        results = await asyncio.gather(*tasks)
+        n_venue_succ = sum(1 for r in results if r is not None)
+        n_venue_fail = sum(1 for r in results if r is None)
+        n_new_paper = sum(r[0] for r in results if r is not None)
+        n_new_link = sum(r[1] for r in results if r is not None)
+        n_paper_fail = sum(r[2] for r in results if r is not None)
+        self.logger.info(f"[V2P Init] Done: {n_venue_succ} venues OK, {n_venue_fail} venues failed | {n_new_paper} new papers, {n_new_link} new links, {n_paper_fail} papers failed")
+        return n_new_paper
