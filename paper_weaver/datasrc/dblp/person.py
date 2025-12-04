@@ -6,7 +6,7 @@ and extract DBLP identifiers from Author objects.
 """
 
 from ...dataclass import Author
-from .parser import PersonPageParser
+from .parser import PersonPageParser, RecordAuthor
 
 
 def author_to_dblp_pid(author: Author) -> str | None:
@@ -23,6 +23,32 @@ def author_to_dblp_pid(author: Author) -> str | None:
         if ident.startswith("dblp:pid:"):
             return ident[9:]  # Remove "dblp:pid:" prefix
     return None
+
+
+def author_from_record_author(record_author: RecordAuthor) -> Author:
+    """
+    Create Author from RecordAuthor (with pid).
+
+    Only returns Author if pid is available (from person pages).
+
+    Args:
+        record_author: RecordAuthor from parser
+
+    Returns:
+        Author with identifiers or None if no pid
+    """
+    identifiers = set()
+
+    if record_author.pid:
+        identifiers.add(f"dblp:pid:{record_author.pid}")
+
+    if record_author.name:
+        identifiers.add(f"dblp:name:{record_author.name}")
+
+    if record_author.orcid:
+        identifiers.add(f"orcid:{record_author.orcid}")
+
+    return Author(identifiers=identifiers)
 
 
 def person_page_to_author(person: PersonPageParser) -> Author:

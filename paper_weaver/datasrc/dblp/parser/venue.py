@@ -162,8 +162,8 @@ class VenuePageParser:
         """
         Iterate over publications directly listed in this venue page.
 
-        Note: Author information in venue pages typically does not include
-        pid attributes.
+        Note: Author information in venue pages includes pid attributes,
+        unlike individual record pages.
         """
         for r_elem in self.data.findall(".//dblpcites/r"):
             if len(r_elem) > 0:

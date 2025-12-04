@@ -5,9 +5,9 @@ Provides functions to convert RecordParser/RecordPageParser to Paper and info di
 and extract DBLP identifiers from Paper/Author objects.
 """
 
-from ...dataclass import Paper, Author
+from ...dataclass import Paper
 from ..title_hash import title_hash
-from .parser import RecordParser, RecordAuthor
+from .parser import RecordParser
 
 
 def paper_to_dblp_key(paper: Paper) -> str | None:
@@ -24,26 +24,6 @@ def paper_to_dblp_key(paper: Paper) -> str | None:
         if ident.startswith("dblp:key:"):
             return ident[9:]  # Remove "dblp:key:" prefix
     return None
-
-
-def author_from_record_author(record_author: RecordAuthor) -> Author | None:
-    """
-    Create Author from RecordAuthor (with pid).
-
-    Only returns Author if pid is available (from person pages).
-
-    Args:
-        record_author: RecordAuthor from parser
-
-    Returns:
-        Author with identifiers or None if no pid
-    """
-    identifiers = set()
-    if record_author.pid:
-        identifiers = {f"dblp:pid:{record_author.pid}"}
-    if record_author.name:
-        identifiers.add(f"name:{record_author.name}")
-    return Author(identifiers=identifiers) if identifiers else None
 
 
 def record_to_paper(record: RecordParser) -> Paper:

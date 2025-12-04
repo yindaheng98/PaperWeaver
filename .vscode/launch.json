@@ -97,6 +97,7 @@
                 "--init-type=dblp",
                 "--init-mode=venues",
                 "--init-dblp-venue-keys=db/conf/cvpr/cvpr2016",
+                "--datasrc-max-concurrent=2",
             ]
         },
     ]

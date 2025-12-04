@@ -1,12 +1,13 @@
 """
 DBLP DataSrc implementation.
 
-Important DBLP API limitation:
+Note on author PIDs:
 - Author pages (pid/xxx.xml) contain publications WITH author pid attributes
 - Paper pages (rec/xxx.xml) do NOT contain author pid attributes
+- Venue pages (db/xxx/xxx.xml) contain publications WITH author pid attributes
 
-Therefore, get_authors_by_paper only works from cache populated by
-get_author_info or get_papers_by_author.
+get_authors_by_paper fetches the venue page to obtain author PIDs when they
+are not available from the record page.
 """
 
 from typing import Tuple
@@ -15,7 +16,8 @@ from ..cache import CachedAsyncPool, DataSrcCacheIface
 from ...dataclass import DataSrc, Paper, Author, Venue
 
 from .parser import RecordPageParser, PersonPageParser, VenuePageParser
-from .record import paper_to_dblp_key, author_from_record_author, record_to_paper, record_to_info
+from .record import paper_to_dblp_key, record_to_paper, record_to_info
+from .person import author_from_record_author
 from .person import author_to_dblp_pid, person_page_to_author, person_page_to_info
 from .venue import venue_to_dblp_key, venue_key_from_paper, venue_page_to_venue, venue_page_to_info
 from .utils import fetch_xml
@@ -115,12 +117,46 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         """
         Get authors for a paper from DBLP.
 
-        Note: DBLP paper pages (rec/xxx.xml) do NOT contain author pid attributes.
-        Authors returned will only have dblp-author-name:{name} identifiers
-        unless the record was fetched from an author page (which includes pids).
+        Strategy:
+        1. First fetch the record page to get basic paper info
+        2. If authors don't have PIDs, fetch venue page and find the paper there
+           (venue pages contain author PIDs, unlike record pages)
         """
         record_page = await self._fetch_record_page(paper)
 
+        # Check if authors have PIDs
+        authors_have_pids = any(
+            record_author.pid for record_author in record_page.authors
+        )
+
+        if not authors_have_pids:
+            # Try getting authors from venue page (which has PIDs)
+            try:
+                paper_info = record_to_paper(record_page)
+                paper_info.identifiers.update(paper.identifiers)
+                info = record_to_info(record_page)
+
+                venue_key = venue_key_from_paper(paper_info, info)
+                if venue_key:
+                    venue_page = await self._fetch_venue_page_by_key(venue_key)
+
+                    # Find this paper in venue page by key
+                    paper_key = record_page.key
+                    for publication in venue_page.publications:
+                        if publication.key == paper_key:
+                            # Found it! Get authors from venue page
+                            authors = []
+                            for record_author in publication.authors:
+                                author = author_from_record_author(record_author)
+                                if author is not None:
+                                    authors.append(author)
+                            if authors:
+                                return authors
+                            break
+            except Exception:
+                pass  # Fall through to use record page authors
+
+        # Fallback: use record page authors (may not have PIDs)
         authors = []
         for record_author in record_page.authors:
             author = author_from_record_author(record_author)
