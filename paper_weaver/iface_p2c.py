@@ -14,6 +14,7 @@ from .dataclass import Paper
 from .iface import WeaverIface
 from .iface_link import PaperLinkWeaverCacheIface
 from .iface_init import PapersWeaverInitializerIface
+from .bfs import bfs_cached_step
 
 
 class Paper2CitationsWeaverCacheIface(PaperLinkWeaverCacheIface, metaclass=ABCMeta):
@@ -44,50 +45,23 @@ class Paper2CitationsWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def paper_to_citations(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and citations, write to cache and dst. Return number of new citations fetched and number of failed citations, or None if failed."""
-        # Step 1: Fetch and save paper info
-        paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
-        if paper_info is None:  # not in cache
-            paper, paper_info = await paper.get_info(self.src)  # fetch from source
-            if paper_info is None:  # failed to fetch
-                return None  # no new paper, no new citations
-            # Write paper info if fetched
-            await self.dst.save_paper_info(paper, paper_info)
-            await self.cache.set_paper_info(paper, paper_info)
-
-        # Step 2: Get or fetch pending citations (not yet written to DataDst)
-        citations = await self.cache.get_pending_citations_for_paper(paper)  # fetch from cache
-        if citations is None:  # not in cache
-            citations = await paper.get_citations(self.src)  # fetch from source
-            if citations is None:  # failed to fetch
-                return None  # no new citations
-            # Cache pending citations (registers them, discoverable via iterate_papers)
-            await self.cache.add_pending_citations_for_paper(paper, citations)
-
-        # Step 3: Process each citation - fetch info and commit link
-        async def process_citation(citation):
-            n_new = 0
-            citation, citation_info = await self.cache.get_paper_info(citation)  # fetch from cache
-            if citation_info is None:  # not in cache
-                citation, citation_info = await citation.get_info(self.src)  # fetch from source
-                if citation_info is None:  # failed to fetch
-                    return None  # no new citation
-                # Write citation info if fetched
-                await self.dst.save_paper_info(citation, citation_info)
-                await self.cache.set_paper_info(citation, citation_info)
-                n_new = 1
-
-            # Step 4: Commit link to DataDst if not already committed
-            if not await self.cache.is_citation_link_committed(paper, citation):
-                await self.dst.link_citation(paper, citation)  # write to DataDst
-                await self.cache.commit_citation_link(paper, citation)  # mark as committed
-
-            return n_new
-
-        results = await asyncio.gather(*[process_citation(citation) for citation in citations])
-        n_new_citations = sum([r for r in results if r is not None])
-        n_failed = sum([1 for r in results if r is None])
-
-        return n_new_citations, n_failed
+        return await bfs_cached_step(
+            parent=paper,
+            load_parent_info=lambda p: p.get_info(self.src),
+            save_parent_info=self.dst.save_paper_info,
+            cache_get_parent_info=self.cache.get_paper_info,
+            cache_set_parent_info=self.cache.set_paper_info,
+            load_pending_children_from_parent=lambda p: p.get_citations(self.src),
+            cache_get_pending_children=self.cache.get_pending_citations_for_paper,
+            cache_add_pending_children=self.cache.add_pending_citations_for_paper,
+            load_child_info=lambda c: c.get_info(self.src),
+            save_child_info=self.dst.save_paper_info,
+            cache_get_child_info=self.cache.get_paper_info,
+            cache_set_child_info=self.cache.set_paper_info,
+            save_link=self.dst.link_citation,
+            is_link_committed=self.cache.is_citation_link_committed,
+            commit_link=self.cache.commit_citation_link,
+        )
 
     async def all_paper_to_citations(self) -> int:
         tasks = []

@@ -14,6 +14,7 @@ from .dataclass import Paper, Venue
 from .iface import WeaverIface
 from .iface_link import VenueLinkWeaverCacheIface
 from .iface_init import PapersWeaverInitializerIface
+from .bfs import bfs_cached_step
 
 
 class Paper2VenuesWeaverCacheIface(VenueLinkWeaverCacheIface, metaclass=ABCMeta):
@@ -44,50 +45,23 @@ class Paper2VenuesWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def paper_to_venues(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and venues, write to cache and dst. Return number of new venues fetched and number of failed venues, or None if failed."""
-        # Step 1: Fetch and save paper info
-        paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
-        if paper_info is None:  # not in cache
-            paper, paper_info = await paper.get_info(self.src)  # fetch from source
-            if paper_info is None:  # failed to fetch
-                return None  # no new paper, no new venues
-            # Write paper info if fetched
-            await self.dst.save_paper_info(paper, paper_info)
-            await self.cache.set_paper_info(paper, paper_info)
-
-        # Step 2: Get or fetch pending venues (not yet written to DataDst)
-        venues = await self.cache.get_pending_venues_for_paper(paper)  # fetch from cache
-        if venues is None:  # not in cache
-            venues = await paper.get_venues(self.src)  # fetch from source
-            if venues is None:  # failed to fetch
-                return None  # no new venues
-            # Cache pending venues (registers them, discoverable via iterate_venues)
-            await self.cache.add_pending_venues_for_paper(paper, venues)
-
-        # Step 3: Process each venue - fetch info and commit link
-        async def process_venue(venue):
-            n_new = 0
-            venue, venue_info = await self.cache.get_venue_info(venue)  # fetch from cache
-            if venue_info is None:  # not in cache
-                venue, venue_info = await venue.get_info(self.src)  # fetch from source
-                if venue_info is None:  # failed to fetch
-                    return None  # no new venue
-                # Write venue info if fetched
-                await self.dst.save_venue_info(venue, venue_info)
-                await self.cache.set_venue_info(venue, venue_info)
-                n_new = 1
-
-            # Step 4: Commit link to DataDst if not already committed
-            if not await self.cache.is_venue_link_committed(paper, venue):
-                await self.dst.link_venue(paper, venue)  # write to DataDst
-                await self.cache.commit_venue_link(paper, venue)  # mark as committed
-
-            return n_new
-
-        results = await asyncio.gather(*[process_venue(venue) for venue in venues])
-        n_new_venues = sum([r for r in results if r is not None])
-        n_failed = sum([1 for r in results if r is None])
-
-        return n_new_venues, n_failed
+        return await bfs_cached_step(
+            parent=paper,
+            load_parent_info=lambda p: p.get_info(self.src),
+            save_parent_info=self.dst.save_paper_info,
+            cache_get_parent_info=self.cache.get_paper_info,
+            cache_set_parent_info=self.cache.set_paper_info,
+            load_pending_children_from_parent=lambda p: p.get_venues(self.src),
+            cache_get_pending_children=self.cache.get_pending_venues_for_paper,
+            cache_add_pending_children=self.cache.add_pending_venues_for_paper,
+            load_child_info=lambda c: c.get_info(self.src),
+            save_child_info=self.dst.save_venue_info,
+            cache_get_child_info=self.cache.get_venue_info,
+            cache_set_child_info=self.cache.set_venue_info,
+            save_link=self.dst.link_venue,
+            is_link_committed=self.cache.is_venue_link_committed,
+            commit_link=self.cache.commit_venue_link,
+        )
 
     async def all_paper_to_venues(self) -> int:
         tasks = []

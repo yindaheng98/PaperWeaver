@@ -14,6 +14,7 @@ from .dataclass import Paper, Author
 from .iface import WeaverIface
 from .iface_link import AuthorLinkWeaverCacheIface
 from .iface_init import AuthorsWeaverInitializerIface
+from .bfs import bfs_cached_step
 
 
 class Author2PapersWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMeta):
@@ -44,50 +45,24 @@ class Author2PapersWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def author_to_papers(self, author: Author) -> Tuple[int, int] | None:
         """Process one author: fetch info and papers, write to cache and dst. Return number of new papers fetched and number of failed papers, or None if failed."""
-        # Step 1: Fetch and save author info
-        author, author_info = await self.cache.get_author_info(author)  # fetch from cache
-        if author_info is None:  # not in cache
-            author, author_info = await author.get_info(self.src)  # fetch from source
-            if author_info is None:  # failed to fetch
-                return None  # no new author, no new papers
-            # Write author info if fetched
-            await self.dst.save_author_info(author, author_info)
-            await self.cache.set_author_info(author, author_info)
-
-        # Step 2: Get or fetch pending papers (not yet written to DataDst)
-        papers = await self.cache.get_pending_papers_for_author(author)  # fetch from cache
-        if papers is None:  # not in cache
-            papers = await author.get_papers(self.src)  # fetch from source
-            if papers is None:  # failed to fetch
-                return None  # no new papers
-            # Cache pending papers (registers them, discoverable via iterate_papers)
-            await self.cache.add_pending_papers_for_author(author, papers)
-
-        # Step 3: Process each paper - fetch info and commit link
-        async def process_paper(paper):
-            n_new = 0
-            paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
-            if paper_info is None:  # not in cache
-                paper, paper_info = await paper.get_info(self.src)  # fetch from source
-                if paper_info is None:  # failed to fetch
-                    return None  # no new paper
-                # Write paper info if fetched
-                await self.dst.save_paper_info(paper, paper_info)
-                await self.cache.set_paper_info(paper, paper_info)
-                n_new = 1
-
-            # Step 4: Commit link to DataDst if not already committed
-            if not await self.cache.is_author_link_committed(paper, author):
-                await self.dst.link_author(paper, author)  # write to DataDst
-                await self.cache.commit_author_link(paper, author)  # mark as committed
-
-            return n_new
-
-        results = await asyncio.gather(*[process_paper(paper) for paper in papers])
-        n_new_papers = sum([r for r in results if r is not None])
-        n_failed = sum([1 for r in results if r is None])
-
-        return n_new_papers, n_failed
+        return await bfs_cached_step(
+            parent=author,
+            load_parent_info=lambda a: a.get_info(self.src),
+            save_parent_info=self.dst.save_author_info,
+            cache_get_parent_info=self.cache.get_author_info,
+            cache_set_parent_info=self.cache.set_author_info,
+            load_pending_children_from_parent=lambda a: a.get_papers(self.src),
+            cache_get_pending_children=self.cache.get_pending_papers_for_author,
+            cache_add_pending_children=self.cache.add_pending_papers_for_author,
+            load_child_info=lambda p: p.get_info(self.src),
+            save_child_info=self.dst.save_paper_info,
+            cache_get_child_info=self.cache.get_paper_info,
+            cache_set_child_info=self.cache.set_paper_info,
+            # Note: link functions take (paper, author) order, so we swap (parent=author, child=paper)
+            save_link=lambda author, paper: self.dst.link_author(paper, author),
+            is_link_committed=lambda author, paper: self.cache.is_author_link_committed(paper, author),
+            commit_link=lambda author, paper: self.cache.commit_author_link(paper, author),
+        )
 
     async def all_author_to_papers(self) -> int:
         tasks = []

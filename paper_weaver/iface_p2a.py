@@ -14,6 +14,7 @@ from .dataclass import Paper, Author
 from .iface import WeaverIface
 from .iface_link import AuthorLinkWeaverCacheIface
 from .iface_init import PapersWeaverInitializerIface
+from .bfs import bfs_cached_step
 
 
 class Paper2AuthorsWeaverCacheIface(AuthorLinkWeaverCacheIface, metaclass=ABCMeta):
@@ -44,50 +45,23 @@ class Paper2AuthorsWeaverIface(WeaverIface, metaclass=ABCMeta):
 
     async def paper_to_authors(self, paper: Paper) -> Tuple[int, int] | None:
         """Process one paper: fetch info and authors, write to cache and dst. Return number of new authors fetched and number of failed authors, or None if failed."""
-        # Step 1: Fetch and save paper info
-        paper, paper_info = await self.cache.get_paper_info(paper)  # fetch from cache
-        if paper_info is None:  # not in cache
-            paper, paper_info = await paper.get_info(self.src)  # fetch from source
-            if paper_info is None:  # failed to fetch
-                return None  # no new paper, no new authors
-            # Write paper info if fetched
-            await self.dst.save_paper_info(paper, paper_info)
-            await self.cache.set_paper_info(paper, paper_info)
-
-        # Step 2: Get or fetch pending authors (not yet written to DataDst)
-        authors = await self.cache.get_pending_authors_for_paper(paper)  # fetch from cache
-        if authors is None:  # not in cache
-            authors = await paper.get_authors(self.src)  # fetch from source
-            if authors is None:  # failed to fetch
-                return None  # no new authors
-            # Cache pending authors (registers them, discoverable via iterate_authors)
-            await self.cache.add_pending_authors_for_paper(paper, authors)
-
-        # Step 3: Process each author - fetch info and commit link
-        async def process_author(author):
-            n_new = 0
-            author, author_info = await self.cache.get_author_info(author)  # fetch from cache
-            if author_info is None:  # not in cache
-                author, author_info = await author.get_info(self.src)  # fetch from source
-                if author_info is None:  # failed to fetch
-                    return None  # no new author
-                # Write author info if fetched
-                await self.dst.save_author_info(author, author_info)
-                await self.cache.set_author_info(author, author_info)
-                n_new = 1
-
-            # Step 4: Commit link to DataDst if not already committed
-            if not await self.cache.is_author_link_committed(paper, author):
-                await self.dst.link_author(paper, author)  # write to DataDst
-                await self.cache.commit_author_link(paper, author)  # mark as committed
-
-            return n_new
-
-        results = await asyncio.gather(*[process_author(author) for author in authors])
-        n_new_authors = sum([r for r in results if r is not None])
-        n_failed = sum([1 for r in results if r is None])
-
-        return n_new_authors, n_failed
+        return await bfs_cached_step(
+            parent=paper,
+            load_parent_info=lambda p: p.get_info(self.src),
+            save_parent_info=self.dst.save_paper_info,
+            cache_get_parent_info=self.cache.get_paper_info,
+            cache_set_parent_info=self.cache.set_paper_info,
+            load_pending_children_from_parent=lambda p: p.get_authors(self.src),
+            cache_get_pending_children=self.cache.get_pending_authors_for_paper,
+            cache_add_pending_children=self.cache.add_pending_authors_for_paper,
+            load_child_info=lambda c: c.get_info(self.src),
+            save_child_info=self.dst.save_author_info,
+            cache_get_child_info=self.cache.get_author_info,
+            cache_set_child_info=self.cache.set_author_info,
+            save_link=self.dst.link_author,
+            is_link_committed=self.cache.is_author_link_committed,
+            commit_link=self.cache.commit_author_link,
+        )
 
     async def all_paper_to_authors(self) -> int:
         tasks = []
