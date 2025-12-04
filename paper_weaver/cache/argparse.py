@@ -24,16 +24,16 @@ def add_cache_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cache-redis-pending-url", help="Redis URL for pending storage")
 
     # TTL for *_info (3 items)
-    parser.add_argument("--cache-paper-info-expire", type=int, help="TTL seconds for paper_info")
-    parser.add_argument("--cache-author-info-expire", type=int, help="TTL seconds for author_info")
-    parser.add_argument("--cache-venue-info-expire", type=int, help="TTL seconds for venue_info")
+    parser.add_argument("--cache-paper-info-expire", type=int, help="TTL seconds for paper_info (default: None, permanent)")
+    parser.add_argument("--cache-author-info-expire", type=int, default=604800, help="TTL seconds for author_info (default: 604800 = 7 days, author info may change over time)")
+    parser.add_argument("--cache-venue-info-expire", type=int, help="TTL seconds for venue_info (default: None, permanent)")
 
     # TTL for pending_* (5 items)
-    parser.add_argument("--cache-pending-papers-by-author-expire", type=int, help="TTL seconds for pending_papers_by_author")
-    parser.add_argument("--cache-pending-authors-by-paper-expire", type=int, help="TTL seconds for pending_authors_by_paper")
-    parser.add_argument("--cache-pending-references-by-paper-expire", type=int, help="TTL seconds for pending_references_by_paper")
-    parser.add_argument("--cache-pending-citations-by-paper-expire", type=int, help="TTL seconds for pending_citations_by_paper")
-    parser.add_argument("--cache-pending-venues-by-paper-expire", type=int, help="TTL seconds for pending_venues_by_paper")
+    parser.add_argument("--cache-pending-papers-by-author-expire", type=int, default=604800, help="TTL seconds for pending_papers_by_author (default: 604800 = 7 days, authors may publish new papers)")
+    parser.add_argument("--cache-pending-authors-by-paper-expire", type=int, help="TTL seconds for pending_authors_by_paper (default: None, permanent, paper authors rarely change)")
+    parser.add_argument("--cache-pending-references-by-paper-expire", type=int, help="TTL seconds for pending_references_by_paper (default: None, permanent, paper references rarely change)")
+    parser.add_argument("--cache-pending-citations-by-paper-expire", type=int, default=604800, help="TTL seconds for pending_citations_by_paper (default: 604800 = 7 days, papers may get new citations)")
+    parser.add_argument("--cache-pending-venues-by-paper-expire", type=int, default=604800, help="TTL seconds for pending_venues_by_paper (default: 604800 = 7 days, venue info may be updated)")
 
 
 def create_cache_from_args(args: argparse.Namespace) -> FullWeaverCache:

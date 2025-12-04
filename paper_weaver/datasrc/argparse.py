@@ -22,7 +22,6 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--datasrc-cache-mode", choices=["memory", "redis"], default="memory", help="DataSrc cache backend (default: memory)")
     parser.add_argument("--datasrc-redis-url", default="redis://localhost:6379", help="Redis URL for DataSrc cache (default: redis://localhost:6379)")
     parser.add_argument("--datasrc-redis-prefix", default="paper-weaver-datasrc-cache", help="Redis key prefix for DataSrc cache (default: paper-weaver-datasrc-cache)")
-    parser.add_argument("--datasrc-redis-expire", type=int, help="TTL seconds for DataSrc redis cache")
 
     # Common HTTP settings
     parser.add_argument("--datasrc-max-concurrent", type=int, default=10, help="Maximum concurrent requests (default: 10)")
@@ -30,13 +29,13 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--datasrc-http-timeout", type=int, default=30, help="HTTP timeout in seconds (default: 30)")
 
     # SemanticScholar specific
-    parser.add_argument("--datasrc-ss-cache-ttl", type=int, default=604800, help="SemanticScholar cache TTL in seconds (default: 604800)")
+    parser.add_argument("--datasrc-ss-cache-ttl", type=int, default=604800, help="SemanticScholar cache TTL in seconds (default: 604800 = 7 days, API data is relatively stable)")
     parser.add_argument("--datasrc-ss-api-key", help="SemanticScholar API key")
 
     # DBLP specific
-    parser.add_argument("--datasrc-dblp-record-ttl", type=int, help="DBLP record cache TTL seconds")
-    parser.add_argument("--datasrc-dblp-person-ttl", type=int, help="DBLP person cache TTL seconds")
-    parser.add_argument("--datasrc-dblp-venue-ttl", type=int, help="DBLP venue cache TTL seconds")
+    parser.add_argument("--datasrc-dblp-record-ttl", type=int, help="DBLP record cache TTL seconds (default: None, permanent, publication records rarely change)")
+    parser.add_argument("--datasrc-dblp-person-ttl", type=int, default=604800, help="DBLP person cache TTL seconds (default: 604800 = 7 days, person info may be updated)")
+    parser.add_argument("--datasrc-dblp-venue-ttl", type=int, default=604800, help="DBLP venue cache TTL seconds (default: 604800 = 7 days, venue info may be updated)")
 
 
 def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
@@ -48,7 +47,7 @@ def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
         case "redis":
             import redis.asyncio as redis
             client = redis.from_url(args.datasrc_redis_url)
-            cache = RedisDataSrcCache(client, args.datasrc_redis_prefix, args.datasrc_redis_expire)
+            cache = RedisDataSrcCache(client, args.datasrc_redis_prefix)
         case _:
             raise ValueError(f"Unknown datasrc cache mode: {args.datasrc_cache_mode}")
 
