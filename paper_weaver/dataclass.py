@@ -7,6 +7,11 @@ from typing import Tuple
 class Paper:
     identifiers: set[str]  # example: ["doi:10.1000/xyz123"]
 
+    def __repr__(self) -> str:
+        ids = sorted(self.identifiers)[:2]
+        suffix = ", ..." if len(self.identifiers) > 2 else ""
+        return f"Paper({', '.join(ids)}{suffix})"
+
     async def get_info(self, src: "DataSrc") -> Tuple["Paper", dict | None]:
         paper, info = await src.get_paper_info_no_exception(self)
         if info is None:
@@ -31,6 +36,11 @@ class Paper:
 class Author:
     identifiers: set[str]  # example: ["orcid:0000-0001-2345-6789"]
 
+    def __repr__(self) -> str:
+        ids = sorted(self.identifiers)[:2]
+        suffix = ", ..." if len(self.identifiers) > 2 else ""
+        return f"Author({', '.join(ids)}{suffix})"
+
     async def get_info(self, src: "DataSrc") -> Tuple["Author", dict | None]:
         author, info = await src.get_author_info_no_exception(self)
         if info is None:
@@ -45,6 +55,11 @@ class Author:
 @dataclass
 class Venue:
     identifiers: set[str]  # example: ["issn:1234-5678"]
+
+    def __repr__(self) -> str:
+        ids = sorted(self.identifiers)[:2]
+        suffix = ", ..." if len(self.identifiers) > 2 else ""
+        return f"Venue({', '.join(ids)}{suffix})"
 
     async def get_info(self, src: "DataSrc") -> Tuple["Venue", dict | None]:
         venue, info = await src.get_venue_info_no_exception(self)

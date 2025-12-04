@@ -7,6 +7,7 @@ Usage:
 
 import argparse
 import asyncio
+import logging
 
 from .argparse import add_weaver_args, create_weaver_from_args
 from .cache.argparse import add_cache_args, create_cache_from_args
@@ -30,8 +31,23 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Run mode
     parser.add_argument("--max-iterations", "-n", type=int, default=0, help="Max BFS iterations (0 = until no new data)")
+    parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity (-v: INFO, -vv: DEBUG)")
 
     return parser
+
+
+def setup_logging(verbosity: int) -> None:
+    if verbosity >= 2:
+        level = logging.DEBUG
+    elif verbosity >= 1:
+        level = logging.INFO
+    else:
+        level = logging.WARNING
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -52,6 +68,7 @@ async def run(args: argparse.Namespace) -> None:
 def main():
     parser = create_parser()
     args = parser.parse_args()
+    setup_logging(args.verbose)
     asyncio.run(run(args))
 
 
