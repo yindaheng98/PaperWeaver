@@ -29,11 +29,11 @@ def add_cache_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cache-venue-info-expire", type=int, help="TTL seconds for venue_info")
 
     # TTL for pending_* (5 items)
-    parser.add_argument("--cache-pending-papers-expire", type=int, help="TTL seconds for pending_papers")
-    parser.add_argument("--cache-pending-authors-expire", type=int, help="TTL seconds for pending_authors")
-    parser.add_argument("--cache-pending-references-expire", type=int, help="TTL seconds for pending_references")
-    parser.add_argument("--cache-pending-citations-expire", type=int, help="TTL seconds for pending_citations")
-    parser.add_argument("--cache-pending-venues-expire", type=int, help="TTL seconds for pending_venues")
+    parser.add_argument("--cache-pending-papers-by-author-expire", type=int, help="TTL seconds for pending_papers_by_author")
+    parser.add_argument("--cache-pending-authors-by-paper-expire", type=int, help="TTL seconds for pending_authors_by_paper")
+    parser.add_argument("--cache-pending-references-by-paper-expire", type=int, help="TTL seconds for pending_references_by_paper")
+    parser.add_argument("--cache-pending-citations-by-paper-expire", type=int, help="TTL seconds for pending_citations_by_paper")
+    parser.add_argument("--cache-pending-venues-by-paper-expire", type=int, help="TTL seconds for pending_venues_by_paper")
 
 
 def create_cache_from_args(args: argparse.Namespace) -> FullWeaverCache:
@@ -69,11 +69,11 @@ def create_cache_from_args(args: argparse.Namespace) -> FullWeaverCache:
             builder.with_redis_committed_venue_links(f"{prefix}:committed_pv", None, committed_client)
 
             # Pending (configurable expire)
-            builder.with_redis_pending_papers(f"{prefix}:pending_a2p", args.cache_pending_papers_expire, pending_client)
-            builder.with_redis_pending_authors(f"{prefix}:pending_p2a", args.cache_pending_authors_expire, pending_client)
-            builder.with_redis_pending_references(f"{prefix}:pending_p2r", args.cache_pending_references_expire, pending_client)
-            builder.with_redis_pending_citations(f"{prefix}:pending_p2c", args.cache_pending_citations_expire, pending_client)
-            builder.with_redis_pending_venues(f"{prefix}:pending_p2v", args.cache_pending_venues_expire, pending_client)
+            builder.with_redis_pending_papers_by_author(f"{prefix}:pending_a2p", args.cache_pending_papers_by_author_expire, pending_client)
+            builder.with_redis_pending_authors_by_paper(f"{prefix}:pending_p2a", args.cache_pending_authors_by_paper_expire, pending_client)
+            builder.with_redis_pending_references_by_paper(f"{prefix}:pending_p2r", args.cache_pending_references_by_paper_expire, pending_client)
+            builder.with_redis_pending_citations_by_paper(f"{prefix}:pending_p2c", args.cache_pending_citations_by_paper_expire, pending_client)
+            builder.with_redis_pending_venues_by_paper(f"{prefix}:pending_p2v", args.cache_pending_venues_by_paper_expire, pending_client)
 
             return builder.build_weaver_cache()
         case _:

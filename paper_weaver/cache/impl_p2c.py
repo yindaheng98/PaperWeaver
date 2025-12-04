@@ -23,7 +23,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
     Cache for paper -> citations relationships.
 
     Additional components:
-    - pending_citations: PendingListManager for paper's pending citations
+    - pending_citations_by_paper: PendingListManager for paper's pending citations
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
         venue_registry: IdentifierRegistryIface,
         venue_info_storage: InfoStorageIface,
         committed_reference_links: CommittedLinkStorageIface,
-        pending_citations: PendingListStorageIface,
+        pending_citations_by_paper: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
@@ -43,14 +43,14 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
             venue_registry, venue_info_storage,
             committed_reference_links
         )
-        self._pending_citations_manager = PendingListManager(
-            self._paper_manager._registry, pending_citations
+        self._pending_citations_by_paper_manager = PendingListManager(
+            self._paper_manager._registry, pending_citations_by_paper
         )
 
     async def get_pending_citations_for_paper(self, paper: Paper) -> list[Paper] | None:
         """Get pending citations for paper."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        id_sets = await self._pending_citations_manager.get_pending_identifier_sets(paper_cid)
+        id_sets = await self._pending_citations_by_paper_manager.get_pending_identifier_sets(paper_cid)
         if id_sets is None:
             return None
         return [Paper(identifiers=ids) for ids in id_sets]
@@ -58,7 +58,7 @@ class Paper2CitationsCache(PaperLinkCache, Paper2CitationsWeaverCacheIface):
     async def add_pending_citations_for_paper(self, paper: Paper, citations: list[Paper]) -> None:
         """Add pending citations for paper (registers them, merges with existing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        registered_sets = await self._pending_citations_manager.add_pending_identifier_sets(
+        registered_sets = await self._pending_citations_by_paper_manager.add_pending_identifier_sets(
             paper_cid, [c.identifiers for c in citations]
         )
         # Update citation identifiers with merged sets

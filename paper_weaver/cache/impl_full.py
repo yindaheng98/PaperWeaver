@@ -36,11 +36,11 @@ class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCa
         committed_author_links: CommittedLinkStorageIface,
         committed_reference_links: CommittedLinkStorageIface,
         committed_venue_links: CommittedLinkStorageIface,
-        pending_papers: PendingListStorageIface,
-        pending_authors: PendingListStorageIface,
-        pending_references: PendingListStorageIface,
-        pending_citations: PendingListStorageIface,
-        pending_venues: PendingListStorageIface,
+        pending_papers_by_author: PendingListStorageIface,
+        pending_authors_by_paper: PendingListStorageIface,
+        pending_references_by_paper: PendingListStorageIface,
+        pending_citations_by_paper: PendingListStorageIface,
+        pending_venues_by_paper: PendingListStorageIface,
     ):
         ComposableCacheBase.__init__(
             self,
@@ -51,18 +51,18 @@ class FullWeaverCache(Author2PapersCache, Paper2AuthorsCache, Paper2ReferencesCa
         self._committed_author_links = committed_author_links
         self._committed_reference_links = committed_reference_links
         self._committed_venue_links = committed_venue_links
-        self._pending_authors_manager = PendingListManager(
-            self._author_manager._registry, pending_authors
+        self._pending_authors_by_paper_manager = PendingListManager(
+            self._author_manager._registry, pending_authors_by_paper
         )
-        self._pending_papers_manager = PendingListManager(
-            self._paper_manager._registry, pending_papers
+        self._pending_papers_by_author_manager = PendingListManager(
+            self._paper_manager._registry, pending_papers_by_author
         )
-        self._pending_references_manager = PendingListManager(
-            self._paper_manager._registry, pending_references
+        self._pending_references_by_paper_manager = PendingListManager(
+            self._paper_manager._registry, pending_references_by_paper
         )
-        self._pending_citations_manager = PendingListManager(
-            self._paper_manager._registry, pending_citations
+        self._pending_citations_by_paper_manager = PendingListManager(
+            self._paper_manager._registry, pending_citations_by_paper
         )
-        self._pending_venues_manager = PendingListManager(
-            self._venue_manager._registry, pending_venues
+        self._pending_venues_by_paper_manager = PendingListManager(
+            self._venue_manager._registry, pending_venues_by_paper
         )

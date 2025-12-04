@@ -23,7 +23,7 @@ class Paper2VenuesCache(VenueLinkCache, Paper2VenuesWeaverCacheIface):
     Cache for paper -> venues relationships.
 
     Additional components:
-    - pending_venues: PendingListManager for paper's pending venues
+    - pending_venues_by_paper: PendingListManager for paper's pending venues
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class Paper2VenuesCache(VenueLinkCache, Paper2VenuesWeaverCacheIface):
         venue_registry: IdentifierRegistryIface,
         venue_info_storage: InfoStorageIface,
         committed_venue_links: CommittedLinkStorageIface,
-        pending_venues: PendingListStorageIface,
+        pending_venues_by_paper: PendingListStorageIface,
     ):
         super().__init__(
             paper_registry, paper_info_storage,
@@ -43,14 +43,14 @@ class Paper2VenuesCache(VenueLinkCache, Paper2VenuesWeaverCacheIface):
             venue_registry, venue_info_storage,
             committed_venue_links
         )
-        self._pending_venues_manager = PendingListManager(
-            self._venue_manager._registry, pending_venues
+        self._pending_venues_by_paper_manager = PendingListManager(
+            self._venue_manager._registry, pending_venues_by_paper
         )
 
     async def get_pending_venues_for_paper(self, paper: Paper) -> list[Venue] | None:
         """Get pending venues for paper."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        id_sets = await self._pending_venues_manager.get_pending_identifier_sets(paper_cid)
+        id_sets = await self._pending_venues_by_paper_manager.get_pending_identifier_sets(paper_cid)
         if id_sets is None:
             return None
         return [Venue(identifiers=ids) for ids in id_sets]
@@ -58,7 +58,7 @@ class Paper2VenuesCache(VenueLinkCache, Paper2VenuesWeaverCacheIface):
     async def add_pending_venues_for_paper(self, paper: Paper, venues: list[Venue]) -> None:
         """Add pending venues for paper (registers them, merges with existing)."""
         paper_cid = await self._get_paper_canonical_id(paper)
-        registered_sets = await self._pending_venues_manager.add_pending_identifier_sets(
+        registered_sets = await self._pending_venues_by_paper_manager.add_pending_identifier_sets(
             paper_cid, [v.identifiers for v in venues]
         )
         # Update venue identifiers with merged sets

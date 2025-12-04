@@ -27,7 +27,7 @@ class TestPaper2ReferencesCache:
             venue_registry=MemoryIdentifierRegistry(),
             venue_info_storage=MemoryInfoStorage(),
             committed_reference_links=MemoryCommittedLinkStorage(),
-            pending_references=MemoryPendingListStorage(),
+            pending_references_by_paper=MemoryPendingListStorage(),
         )
 
     @pytest.mark.asyncio

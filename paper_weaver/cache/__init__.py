@@ -30,8 +30,8 @@ Usage:
         .with_memory_author_registry()
         .with_redis_author_info("author_info")
         .with_memory_committed_author_links()
-        .with_memory_pending_papers()   # for author's pending papers
-        .with_memory_pending_authors()  # for paper's pending authors
+        .with_memory_pending_papers_by_author()   # for author's pending papers
+        .with_memory_pending_authors_by_paper()  # for paper's pending authors
         .build_weaver_cache())
 """
 

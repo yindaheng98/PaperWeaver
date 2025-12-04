@@ -27,7 +27,7 @@ class TestAuthor2PapersCache:
             venue_registry=MemoryIdentifierRegistry(),
             venue_info_storage=MemoryInfoStorage(),
             committed_author_links=MemoryCommittedLinkStorage(),
-            pending_papers=MemoryPendingListStorage(),
+            pending_papers_by_author=MemoryPendingListStorage(),
         )
 
     @pytest.mark.asyncio
