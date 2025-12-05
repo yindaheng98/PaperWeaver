@@ -73,14 +73,14 @@ def venue_page_to_venue(parser: VenuePageParser) -> Venue:
     if parser.title:
         identifiers.add(f"title:{parser.title}")
         for method, h in title_hash(parser.title).items():
-            identifiers.add(f"title_hash:{method}:{h}")
+            identifiers.add(f"title_hash:{h}")
 
     if parser.proceedings_title:
         identifiers.add(f"proceedings_title:{parser.proceedings_title}")
         identifiers.add(f"title:{parser.proceedings_title}")
         for method, h in title_hash(parser.proceedings_title).items():
-            identifiers.add(f"proceedings_title_hash:{method}:{h}")
-            identifiers.add(f"title_hash:{method}:{h}")
+            identifiers.add(f"proceedings_title_hash:{h}")
+            identifiers.add(f"title_hash:{h}")
 
     for ee in parser.proceedings_ees:
         identifiers.add(ee)

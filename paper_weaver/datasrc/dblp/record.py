@@ -46,7 +46,7 @@ def record_to_paper(record: RecordParser) -> Paper:
     if record.title:
         identifiers.add(f"title:{record.title}")
         for method, h in title_hash(record.title).items():
-            identifiers.add(f"title_hash:{method}:{h}")
+            identifiers.add(f"title_hash:{h}")
 
     for ee in record.ees:
         identifiers.add(f"{ee}")
