@@ -66,7 +66,15 @@ def record_to_info(record: RecordParser) -> dict:
     """
     info = {}
 
-    # TODO： if this paper is a CoRR, then emit most fields
+    # if this paper is a CoRR, then emit most fields
+    if record.journal and record.journal == "CoRR":
+        # Common keys
+        if record.title:
+            info["title"] = record.title
+        ees = list(record.ees)
+        if ees:
+            info["urls"] = ees
+        return info
 
     # Keys with dblp: prefix
     if record.key:
