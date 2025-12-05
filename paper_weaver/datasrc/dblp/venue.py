@@ -63,7 +63,6 @@ def venue_page_to_venue(parser: VenuePageParser) -> Venue:
     - dblp:key:{key} - DBLP venue key (matches info["dblp:key"])
     - title:{title} - Venue title (matches info["title"])
     - proceedings_title:{proceedings_title} - Proceedings title (matches info["proceedings_title"])
-    - proceedings_isbn:{isbn} - ISBN from proceedings (matches info["proceedings_isbn"])
     - {ee} - All proceedings ee URLs as identifiers
     """
     identifiers = set()
@@ -82,9 +81,6 @@ def venue_page_to_venue(parser: VenuePageParser) -> Venue:
         for method, h in title_hash(parser.proceedings_title).items():
             identifiers.add(f"proceedings_title_hash:{method}:{h}")
             identifiers.add(f"title_hash:{method}:{h}")
-    if parser.proceedings_isbn:
-        identifiers.add(f"proceedings_isbn:{parser.proceedings_isbn}")
-        identifiers.add(f"isbn:{parser.proceedings_isbn}")
 
     for ee in parser.proceedings_ees:
         identifiers.add(ee)

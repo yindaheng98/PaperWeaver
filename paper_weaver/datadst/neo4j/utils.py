@@ -3,10 +3,20 @@ Common utilities for Neo4j data operations.
 
 Provides functions for merging nodes based on identifiers and
 updating node properties with info dicts.
+
+Identifier Storage:
+- Each identifier is stored as a separate node (e.g., PaperIdentifier, AuthorIdentifier, VenueIdentifier)
+- Main nodes (Paper, Author, Venue) connect to identifier nodes via HAS_ID relationship
+- This allows indexing on identifier values (Neo4j cannot index list properties)
 """
 
 from typing import Any
 from neo4j import AsyncSession
+
+
+def _get_identifier_label(label: str) -> str:
+    """Get the identifier node label for a given main node label."""
+    return f"{label}Identifier"
 
 
 async def find_nodes_by_identifiers(
@@ -28,10 +38,16 @@ async def find_nodes_by_identifiers(
     if not identifiers:
         return []
 
+    id_label = _get_identifier_label(label)
+
+    # Find main nodes through identifier nodes
     query = f"""
-        MATCH (n:{label})
-        WHERE ANY(id IN n.identifiers WHERE id IN $identifiers)
-        RETURN n, elementId(n) as element_id
+        MATCH (n:{label})-[:HAS_ID]->(id:{id_label})
+        WHERE id.value IN $identifiers
+        WITH DISTINCT n
+        OPTIONAL MATCH (n)-[:HAS_ID]->(all_ids:{id_label})
+        WITH n, collect(all_ids.value) as id_list
+        RETURN n, elementId(n) as element_id, id_list
     """
     result = await tx.run(query, identifiers=list(identifiers))
     nodes = []
@@ -39,7 +55,7 @@ async def find_nodes_by_identifiers(
         node = record["n"]
         nodes.append({
             "element_id": record["element_id"],
-            "identifiers": set(node.get("identifiers", [])),
+            "identifiers": set(record["id_list"]),
             "properties": dict(node)
         })
     return nodes
@@ -71,6 +87,8 @@ async def merge_nodes_into_one(
     if not nodes:
         raise ValueError("No nodes to merge")
 
+    id_label = _get_identifier_label(label)
+
     # Collect all identifiers from all nodes
     all_identifiers = set(new_identifiers)
     for node in nodes:
@@ -80,12 +98,10 @@ async def merge_nodes_into_one(
     merged_props = {}
     for node in nodes:
         for key, value in node["properties"].items():
-            if key != "identifiers":  # Skip identifiers, handled separately
-                merged_props[key] = value
+            merged_props[key] = value
 
     # New info overrides existing
     merged_props.update(new_info)
-    merged_props["identifiers"] = list(all_identifiers)
 
     # Keep the first node, update it with merged properties
     primary_node = nodes[0]
@@ -107,10 +123,33 @@ async def merge_nodes_into_one(
         """
         await tx.run(update_query, **params)
 
-    # Delete other nodes and transfer their relationships
+    # Delete other nodes and transfer their relationships (including identifier nodes)
     if len(nodes) > 1:
         other_ids = [n["element_id"] for n in nodes[1:]]
         await _transfer_relationships_and_delete(tx, label, primary_id, other_ids)
+
+    # Ensure all identifiers are linked to the primary node
+    # First, get existing identifier values for primary node
+    existing_ids_query = f"""
+        MATCH (n:{label})-[:HAS_ID]->(id:{id_label})
+        WHERE elementId(n) = $primary_id
+        RETURN collect(id.value) as existing_ids
+    """
+    result = await tx.run(existing_ids_query, primary_id=primary_id)
+    record = await result.single()
+    existing_ids = set(record["existing_ids"]) if record else set()
+
+    # Create new identifier nodes for identifiers not yet linked
+    new_ids_to_create = all_identifiers - existing_ids
+    if new_ids_to_create:
+        for id_value in new_ids_to_create:
+            create_id_query = f"""
+                MATCH (n:{label})
+                WHERE elementId(n) = $primary_id
+                CREATE (id:{id_label} {{value: $id_value}})
+                CREATE (n)-[:HAS_ID]->(id)
+            """
+            await tx.run(create_id_query, primary_id=primary_id, id_value=id_value)
 
     return primary_id
 
@@ -130,12 +169,55 @@ async def _transfer_relationships_and_delete(
         primary_id: element_id of node to keep
         other_ids: element_ids of nodes to delete
     """
-    # Transfer incoming relationships
+    id_label = _get_identifier_label(label)
+
+    # Transfer identifier nodes from other nodes to primary node
+    # First, collect identifier values from other nodes
+    collect_ids_query = f"""
+        MATCH (other:{label})-[:HAS_ID]->(id:{id_label})
+        WHERE elementId(other) IN $other_ids
+        RETURN collect(DISTINCT id.value) as id_values
+    """
+    result = await tx.run(collect_ids_query, other_ids=other_ids)
+    record = await result.single()
+    other_id_values = set(record["id_values"]) if record else set()
+
+    # Get existing identifier values for primary node
+    existing_ids_query = f"""
+        MATCH (n:{label})-[:HAS_ID]->(id:{id_label})
+        WHERE elementId(n) = $primary_id
+        RETURN collect(id.value) as existing_ids
+    """
+    result = await tx.run(existing_ids_query, primary_id=primary_id)
+    record = await result.single()
+    existing_ids = set(record["existing_ids"]) if record else set()
+
+    # Create new identifier nodes for values not yet linked to primary
+    new_ids_to_create = other_id_values - existing_ids
+    if new_ids_to_create:
+        for id_value in new_ids_to_create:
+            create_id_query = f"""
+                MATCH (n:{label})
+                WHERE elementId(n) = $primary_id
+                CREATE (id:{id_label} {{value: $id_value}})
+                CREATE (n)-[:HAS_ID]->(id)
+            """
+            await tx.run(create_id_query, primary_id=primary_id, id_value=id_value)
+
+    # Delete identifier nodes connected to other nodes
+    delete_ids_query = f"""
+        MATCH (other:{label})-[:HAS_ID]->(id:{id_label})
+        WHERE elementId(other) IN $other_ids
+        DETACH DELETE id
+    """
+    await tx.run(delete_ids_query, other_ids=other_ids)
+
+    # Transfer incoming relationships (except HAS_ID)
     transfer_in_query = f"""
         MATCH (n:{label}) WHERE elementId(n) = $primary_id
         MATCH (other:{label}) WHERE elementId(other) IN $other_ids
         MATCH (source)-[r]->(other)
-        WHERE source <> n
+        WHERE source <> n AND type(r) <> 'HAS_ID'
         CALL {{
             WITH source, r, n
             WITH source, type(r) as rel_type, properties(r) as rel_props, n
@@ -145,12 +227,12 @@ async def _transfer_relationships_and_delete(
         RETURN count(*) as transferred
     """
 
-    # Transfer outgoing relationships
+    # Transfer outgoing relationships (except HAS_ID)
     transfer_out_query = f"""
         MATCH (n:{label}) WHERE elementId(n) = $primary_id
         MATCH (other:{label}) WHERE elementId(other) IN $other_ids
         MATCH (other)-[r]->(target)
-        WHERE target <> n
+        WHERE target <> n AND type(r) <> 'HAS_ID'
         CALL {{
             WITH n, r, target
             WITH n, type(r) as rel_type, properties(r) as rel_props, target
@@ -196,10 +278,10 @@ async def create_node(
     Returns:
         element_id of the created node
     """
+    id_label = _get_identifier_label(label)
     props = dict(info)
-    props["identifiers"] = list(identifiers)
 
-    # Build property string
+    # Build property string for main node (without identifiers)
     prop_items = []
     params = {}
     for key, value in props.items():
@@ -207,13 +289,32 @@ async def create_node(
         prop_items.append(f"`{key}`: ${param_name}")
         params[param_name] = value
 
-    query = f"""
-        CREATE (n:{label} {{{', '.join(prop_items)}}})
-        RETURN elementId(n) as element_id
-    """
+    # Create main node
+    if prop_items:
+        query = f"""
+            CREATE (n:{label} {{{', '.join(prop_items)}}})
+            RETURN elementId(n) as element_id
+        """
+    else:
+        query = f"""
+            CREATE (n:{label})
+            RETURN elementId(n) as element_id
+        """
     result = await tx.run(query, **params)
     record = await result.single()
-    return record["element_id"]
+    element_id = record["element_id"]
+
+    # Create identifier nodes and connect them
+    for id_value in identifiers:
+        id_query = f"""
+            MATCH (n:{label})
+            WHERE elementId(n) = $element_id
+            CREATE (id:{id_label} {{value: $id_value}})
+            CREATE (n)-[:HAS_ID]->(id)
+        """
+        await tx.run(id_query, element_id=element_id, id_value=id_value)
+
+    return element_id
 
 
 async def save_node(

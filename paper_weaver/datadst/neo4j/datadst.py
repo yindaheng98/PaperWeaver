@@ -5,7 +5,8 @@ Provides a DataDst implementation that stores Paper, Author, and Venue
 nodes in a Neo4j graph database.
 
 Features:
-- Stores identifiers as an array property on each node
+- Stores identifiers as separate nodes (e.g., PaperIdentifier, AuthorIdentifier, VenueIdentifier)
+  connected via HAS_ID relationships (allows indexing, which Neo4j cannot do on list properties)
 - Merges nodes with overlapping identifiers into one
 - Updates existing nodes by adding new identifiers and merging info
 - Creates relationships between nodes (AUTHORED, PUBLISHED_IN, CITES)
@@ -27,12 +28,18 @@ class Neo4jDataDst(DataDst):
     DataDst implementation for Neo4j graph database.
 
     Stores Paper, Author, and Venue as nodes with their info as properties.
-    Identifiers are stored as an array property on each node.
+    Identifiers are stored as separate nodes connected via HAS_ID relationships:
+    - Paper -[:HAS_ID]-> PaperIdentifier
+    - Author -[:HAS_ID]-> AuthorIdentifier
+    - Venue -[:HAS_ID]-> VenueIdentifier
+
+    This structure allows creating indexes on identifier values
+    (Neo4j cannot create indexes on list properties).
 
     When saving:
-    - Finds all nodes with any matching identifier
+    - Finds all nodes with any matching identifier (via identifier nodes)
     - Merges all matching nodes into one
-    - Adds new identifiers to the merged node's identifiers array
+    - Creates new identifier nodes for new identifiers
     - Updates properties: new info values override existing values for same keys
 
     Relationships:

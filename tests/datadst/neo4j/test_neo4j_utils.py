@@ -81,17 +81,23 @@ async def neo4j_session(neo4j_driver):
     """Create a Neo4j async session and clean up test data."""
     session = neo4j_driver.session()
 
-    # Clean up test nodes before each test
+    # Clean up test nodes and identifier nodes before each test
     await session.run("MATCH (n:TestPaper) DETACH DELETE n")
     await session.run("MATCH (n:TestAuthor) DETACH DELETE n")
     await session.run("MATCH (n:TestVenue) DETACH DELETE n")
+    await session.run("MATCH (n:TestPaperIdentifier) DETACH DELETE n")
+    await session.run("MATCH (n:TestAuthorIdentifier) DETACH DELETE n")
+    await session.run("MATCH (n:TestVenueIdentifier) DETACH DELETE n")
 
     yield session
 
-    # Clean up test nodes after each test
+    # Clean up test nodes and identifier nodes after each test
     await session.run("MATCH (n:TestPaper) DETACH DELETE n")
     await session.run("MATCH (n:TestAuthor) DETACH DELETE n")
     await session.run("MATCH (n:TestVenue) DETACH DELETE n")
+    await session.run("MATCH (n:TestPaperIdentifier) DETACH DELETE n")
+    await session.run("MATCH (n:TestAuthorIdentifier) DETACH DELETE n")
+    await session.run("MATCH (n:TestVenueIdentifier) DETACH DELETE n")
     await session.close()
 
 
@@ -254,9 +260,8 @@ class TestCreateNode:
                 tx, "TestPaper", {"doi:123"}
             )
             assert len(result) == 1
-            # Only identifiers should be set
-            props = result[0]["properties"]
-            assert "identifiers" in props
+            # Identifiers should be available via the identifiers field
+            assert "doi:123" in result[0]["identifiers"]
 
         await neo4j_session.execute_read(_verify)
 
@@ -306,6 +311,27 @@ class TestCreateNode:
             assert "Stanford" in props["affiliations"]
 
         await neo4j_session.execute_read(_verify)
+
+    @pytest.mark.asyncio
+    async def test_create_node_creates_identifier_nodes(self, neo4j_session):
+        """Should create separate identifier nodes connected via HAS_ID."""
+        async def _create(tx):
+            await create_node(
+                tx, "TestPaper",
+                {"doi:123", "arxiv:456"},
+                {"title": "Test Paper"}
+            )
+
+        await neo4j_session.execute_write(_create)
+
+        # Verify identifier nodes exist and are connected
+        result = await neo4j_session.run(
+            "MATCH (p:TestPaper)-[:HAS_ID]->(id:TestPaperIdentifier) "
+            "RETURN p.title as title, collect(id.value) as ids"
+        )
+        record = await result.single()
+        assert record["title"] == "Test Paper"
+        assert set(record["ids"]) == {"doi:123", "arxiv:456"}
 
 
 # =============================================================================
@@ -447,6 +473,42 @@ class TestMergeNodesIntoOne:
             assert props.get("prop_a") == "value_a" or props.get("prop_b") == "value_b"
 
         await neo4j_session.execute_read(_verify)
+
+    @pytest.mark.asyncio
+    async def test_merge_cleans_up_duplicate_identifier_nodes(self, neo4j_session):
+        """Merging should clean up identifier nodes from deleted nodes."""
+        # Create two separate nodes with some identifiers
+        async def _create(tx):
+            await create_node(tx, "TestPaper", {"doi:A", "shared:123"}, {"title": "Paper A"})
+            await create_node(tx, "TestPaper", {"doi:B", "shared:456"}, {"title": "Paper B"})
+
+        await neo4j_session.execute_write(_create)
+
+        # Merge them
+        async def _merge(tx):
+            nodes = await find_nodes_by_identifiers(tx, "TestPaper", {"doi:A", "doi:B"})
+            await merge_nodes_into_one(tx, "TestPaper", nodes, set(), {"title": "Merged"})
+
+        await neo4j_session.execute_write(_merge)
+
+        # Verify only one Paper node exists with all identifiers
+        result = await neo4j_session.run(
+            "MATCH (p:TestPaper) RETURN count(p) as paper_count"
+        )
+        record = await result.single()
+        assert record["paper_count"] == 1
+
+        # Verify all identifiers are connected to the single paper
+        result = await neo4j_session.run(
+            "MATCH (p:TestPaper)-[:HAS_ID]->(id:TestPaperIdentifier) "
+            "RETURN collect(id.value) as ids"
+        )
+        record = await result.single()
+        ids = set(record["ids"])
+        assert "doi:A" in ids
+        assert "doi:B" in ids
+        assert "shared:123" in ids
+        assert "shared:456" in ids
 
 
 # =============================================================================
@@ -802,6 +864,101 @@ class TestIntegration:
             assert props["abstract"] == "Added by source2"
 
         await neo4j_session.execute_read(_verify)
+
+
+# =============================================================================
+# Test: Identifier Node Structure
+# =============================================================================
+
+class TestIdentifierNodeStructure:
+    """Tests specific to the identifier node storage structure."""
+
+    @pytest.mark.asyncio
+    async def test_identifiers_stored_as_separate_nodes(self, neo4j_session):
+        """Identifiers should be stored as separate nodes, not as list property."""
+        async def _create(tx):
+            await create_node(
+                tx, "TestPaper",
+                {"doi:123", "arxiv:456"},
+                {"title": "Test Paper"}
+            )
+
+        await neo4j_session.execute_write(_create)
+
+        # Verify identifier nodes exist
+        result = await neo4j_session.run(
+            "MATCH (id:TestPaperIdentifier) RETURN count(id) as count"
+        )
+        record = await result.single()
+        assert record["count"] == 2
+
+        # Verify HAS_ID relationships exist
+        result = await neo4j_session.run(
+            "MATCH (p:TestPaper)-[r:HAS_ID]->(id:TestPaperIdentifier) "
+            "RETURN count(r) as count"
+        )
+        record = await result.single()
+        assert record["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_identifier_nodes_have_value_property(self, neo4j_session):
+        """Each identifier node should have a 'value' property."""
+        async def _create(tx):
+            await create_node(
+                tx, "TestPaper",
+                {"doi:123"},
+                {"title": "Test Paper"}
+            )
+
+        await neo4j_session.execute_write(_create)
+
+        result = await neo4j_session.run(
+            "MATCH (id:TestPaperIdentifier) RETURN id.value as value"
+        )
+        record = await result.single()
+        assert record["value"] == "doi:123"
+
+    @pytest.mark.asyncio
+    async def test_main_node_has_no_identifiers_property(self, neo4j_session):
+        """Main node should not have an 'identifiers' list property."""
+        async def _create(tx):
+            await create_node(
+                tx, "TestPaper",
+                {"doi:123"},
+                {"title": "Test Paper"}
+            )
+
+        await neo4j_session.execute_write(_create)
+
+        result = await neo4j_session.run(
+            "MATCH (p:TestPaper) RETURN p.identifiers as identifiers, p.title as title"
+        )
+        record = await result.single()
+        assert record["identifiers"] is None
+        assert record["title"] == "Test Paper"
+
+    @pytest.mark.asyncio
+    async def test_can_index_identifier_value(self, neo4j_session):
+        """Should be able to create an index on identifier value (the main benefit)."""
+        # Create an index (this should work since value is a scalar property)
+        try:
+            await neo4j_session.run(
+                "CREATE INDEX test_paper_identifier_value IF NOT EXISTS "
+                "FOR (id:TestPaperIdentifier) ON (id.value)"
+            )
+            index_created = True
+        except Exception:
+            index_created = False
+
+        assert index_created, "Should be able to create index on identifier value"
+
+        # Clean up index
+        try:
+            await neo4j_session.run(
+                "DROP INDEX test_paper_identifier_value IF EXISTS"
+            )
+        except Exception:
+            pass
 
 
 # =============================================================================

@@ -90,8 +90,10 @@
                 "--datadst-type=neo4j",
                 "--max-iterations=3",
                 "--init=dblp-venue-index",
-                "--init-dblp-venue-index-keys=db/conf/cvpr",
                 "--datasrc-max-concurrent=2",
+                "--init-dblp-venue-index-keys",
+                "db/conf/cvpr",
+                "db/journals/pami",
             ]
         },
     ]
