@@ -19,4 +19,4 @@ class Neo4JDBLPAuthorsInitializer(AuthorsWeaverInitializerIface):
 class Neo4JDBLPVenuesInitializer(VenuesWeaverInitializerIface):
     pass
 
-# TODO: Load from Neo4J
+# TODO: Load DBLP from Neo4J
