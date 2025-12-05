@@ -7,7 +7,7 @@ and extract DBLP identifiers from Paper/Author objects.
 
 from ...dataclass import Paper
 from ..title_hash import title_hash
-from .parser import RecordParser
+from dblp_webxml_parser import RecordParser
 
 
 def paper_to_dblp_key(paper: Paper) -> str | None:

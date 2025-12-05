@@ -6,7 +6,7 @@ and extract DBLP identifiers from Author objects.
 """
 
 from ...dataclass import Author
-from .parser import PersonPageParser, RecordAuthor
+from dblp_webxml_parser import PersonPageParser, RecordAuthor
 
 
 def author_to_dblp_pid(author: Author) -> str | None:

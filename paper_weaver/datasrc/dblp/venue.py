@@ -7,7 +7,7 @@ and extract DBLP identifiers from Venue objects.
 
 from ...dataclass import Paper, Venue
 from ..title_hash import title_hash
-from .parser import VenuePageParser
+from dblp_webxml_parser import VenuePageParser
 
 
 def venue_to_dblp_key(venue: Venue) -> str | None:

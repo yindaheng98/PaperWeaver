@@ -15,7 +15,7 @@ from typing import Tuple
 from ..cache import CachedAsyncPool, DataSrcCacheIface
 from ...dataclass import DataSrc, Paper, Author, Venue
 
-from .parser import RecordPageParser, PersonPageParser, VenuePageParser
+from dblp_webxml_parser import RecordPageParser, PersonPageParser, VenuePageParser
 from .record import paper_to_dblp_key, record_to_paper, record_to_info
 from .person import author_from_record_author
 from .person import author_to_dblp_pid, person_page_to_author, person_page_to_info
