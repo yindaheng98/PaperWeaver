@@ -7,7 +7,6 @@ by CachedAsyncPool.
 """
 
 import json
-import os
 from typing import Tuple
 
 import aiohttp
@@ -41,26 +40,23 @@ class SemanticScholarDataSrc(CachedAsyncPool, DataSrc):
         cache: DataSrcCacheIface,
         max_concurrent: int = 10,
         cache_ttl: int | None = None,
-        http_headers: dict | None = None,
-        http_proxy: str | None = None,
-        http_timeout: int = 30
+        http_headers: dict | None = None
     ):
         """
         Initialize SemanticScholarDataSrc.
+
+        Proxy is automatically read from environment variables (HTTP_PROXY, HTTPS_PROXY)
+        via aiohttp's trust_env=True setting.
 
         Args:
             cache: Cache implementation
             max_concurrent: Maximum concurrent requests
             cache_ttl: Cache time-to-live in seconds (None = no expiration)
             http_headers: Optional HTTP headers for requests
-            http_proxy: Optional HTTP proxy URL
-            http_timeout: HTTP request timeout in seconds
         """
         CachedAsyncPool.__init__(self, cache, max_concurrent)
         self._cache_ttl = cache_ttl if cache_ttl is not None else self.DEFAULT_CACHE_TTL
         self._http_headers = http_headers or {}
-        self._http_proxy = http_proxy or os.getenv("HTTP_PROXY")
-        self._http_timeout = http_timeout
 
     # ==================== Helper Methods ====================
 
@@ -121,15 +117,13 @@ class SemanticScholarDataSrc(CachedAsyncPool, DataSrc):
     async def _fetch_json(self, url: str) -> str | None:
         """Fetch JSON data from URL."""
         try:
-            connector = aiohttp.TCPConnector(ssl=False)
             async with aiohttp.ClientSession(
-                connector=connector,
-                headers=self._http_headers
+                headers=self._http_headers,
+                trust_env=True
             ) as session:
                 async with session.get(
                     url,
-                    proxy=self._http_proxy,
-                    timeout=aiohttp.ClientTimeout(total=self._http_timeout)
+                    timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
                     if response.status == 200:
                         return await response.text()

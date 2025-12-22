@@ -12,21 +12,11 @@ import re
 from typing import AsyncIterator
 from xml.etree import ElementTree
 
-import aiohttp
-
+from ...datasrc.dblp import fetch_xml
 from ...dataclass import Venue
 from ...iface_init import VenuesWeaverInitializerIface
 
 DBLP_BASE_URL = "https://dblp.org"
-
-
-async def _fetch_xml(url: str) -> ElementTree.Element:
-    """Fetch XML from a URL and parse it."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            response.raise_for_status()
-            text = await response.text()
-            return ElementTree.fromstring(text)
 
 
 async def _get_venue_keys(dblp_key: str) -> list[str]:
@@ -40,7 +30,7 @@ async def _get_venue_keys(dblp_key: str) -> list[str]:
         List of venue keys like ['db/conf/cvpr/cvpr2025', 'db/conf/cvpr/cvpr2024', ...]
     """
     url = f"{DBLP_BASE_URL}/{dblp_key}/index.xml"
-    data = await _fetch_xml(url)
+    data = ElementTree.fromstring(await fetch_xml(url))
     urls = [re.sub(r"\.html$", "", li.attrib["href"]) for li in data.findall('./ul/li/ref')]
     for proceedings in data.findall('./dblpcites/r/proceedings'):
         if proceedings.find('./url') is None:

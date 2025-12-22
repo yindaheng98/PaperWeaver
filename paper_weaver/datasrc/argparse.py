@@ -25,8 +25,6 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
 
     # Common HTTP settings
     parser.add_argument("--datasrc-max-concurrent", type=int, default=10, help="Maximum concurrent requests (default: 10)")
-    parser.add_argument("--datasrc-http-proxy", help="HTTP proxy URL")
-    parser.add_argument("--datasrc-http-timeout", type=int, default=30, help="HTTP timeout in seconds (default: 30)")
 
     # SemanticScholar specific
     parser.add_argument("--datasrc-ss-cache-ttl", type=int, default=604800, help="SemanticScholar cache TTL in seconds (default: 604800 = 7 days, API data is relatively stable)")
@@ -59,9 +57,7 @@ def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
                 cache=cache,
                 max_concurrent=args.datasrc_max_concurrent,
                 cache_ttl=args.datasrc_ss_cache_ttl,
-                http_headers=http_headers,
-                http_proxy=args.datasrc_http_proxy,
-                http_timeout=args.datasrc_http_timeout
+                http_headers=http_headers
             )
         case "dblp":
             return DBLPDataSrc(
@@ -69,9 +65,7 @@ def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
                 max_concurrent=args.datasrc_max_concurrent,
                 record_cache_ttl=args.datasrc_dblp_record_ttl,
                 person_cache_ttl=args.datasrc_dblp_person_ttl,
-                venue_cache_ttl=args.datasrc_dblp_venue_ttl,
-                http_proxy=args.datasrc_http_proxy,
-                http_timeout=args.datasrc_http_timeout
+                venue_cache_ttl=args.datasrc_dblp_venue_ttl
             )
         case _:
             raise ValueError(f"Unknown datasrc type: {args.datasrc_type}")

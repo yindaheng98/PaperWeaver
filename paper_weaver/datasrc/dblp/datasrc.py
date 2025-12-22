@@ -40,12 +40,13 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
         max_concurrent: int = 10,
         record_cache_ttl: int | None = None,
         person_cache_ttl: int | None = None,
-        venue_cache_ttl: int | None = None,
-        http_proxy: str | None = None,
-        http_timeout: int = 30
+        venue_cache_ttl: int | None = None
     ):
         """
         Initialize DBLPDataSrc.
+
+        Proxy is automatically read from environment variables (HTTP_PROXY, HTTPS_PROXY)
+        via aiohttp's trust_env=True setting.
 
         Args:
             cache: Cache implementation
@@ -53,15 +54,11 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
             record_cache_ttl: Cache TTL for record pages in seconds (None = no expiration)
             person_cache_ttl: Cache TTL for person pages in seconds (None = no expiration)
             venue_cache_ttl: Cache TTL for venue pages in seconds (None = no expiration)
-            http_proxy: Optional HTTP proxy URL
-            http_timeout: HTTP request timeout in seconds
         """
         CachedAsyncPool.__init__(self, cache, max_concurrent)
         self._record_cache_ttl = record_cache_ttl
         self._person_cache_ttl = person_cache_ttl
         self._venue_cache_ttl = venue_cache_ttl
-        self._http_proxy = http_proxy
-        self._http_timeout = http_timeout
 
     # ==================== Paper Methods ====================
 
@@ -72,7 +69,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
         record_page = await self.get_or_fetch(
             url,
-            lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
+            lambda: fetch_xml(url),
             RecordPageParser,
             self._record_cache_ttl
         )
@@ -195,7 +192,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
         person_page = await self.get_or_fetch(
             url,
-            lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
+            lambda: fetch_xml(url),
             PersonPageParser,
             self._person_cache_ttl
         )
@@ -243,7 +240,7 @@ class DBLPDataSrc(CachedAsyncPool, DataSrc):
 
         venue_page = await self.get_or_fetch(
             url,
-            lambda: fetch_xml(url, self._http_proxy, self._http_timeout),
+            lambda: fetch_xml(url),
             VenuePageParser,
             self._venue_cache_ttl
         )
