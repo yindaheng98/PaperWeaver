@@ -72,6 +72,83 @@ paper-weaver \
   -n 5 -v
 ```
 
+## Type System and How It Works
+
+PaperWeaver is a **typed, composable BFS pipeline**. You can treat it as four pluggable layers:
+
+1. **Domain Types** (`Paper`, `Author`, `Venue`)
+   - Each entity is a dataclass with `identifiers: set[str]`.
+   - The identifier set is the core identity model: if two objects share any identifier, cache and storage layers can merge them as one logical entity.
+
+2. **Behavior Contracts**
+   - `DataSrc`: how to fetch info and neighbors (papers, authors, venues, references, citations).
+   - `DataDst`: how to persist entity info and links.
+   - `WeaverCacheIface`: how to remember fetched info, pending neighbors, and committed links.
+   - `WeaverInitializerIface`: how to provide BFS seeds.
+
+3. **Traversal Interfaces**
+   - Relation interfaces such as `Author2PapersWeaverIface`, `Paper2AuthorsWeaverIface`, `Paper2VenuesWeaverIface`, `Venue2PapersWeaverIface`, etc. all share one cached BFS step implementation.
+   - `Author2Paper2VenueWeaver` composes multiple relation interfaces and runs them in sequence.
+
+4. **Concrete Implementations**
+   - Data sources: `DBLPDataSrc`, `SemanticScholarDataSrc`
+   - Destination: `Neo4jDataDst`
+   - Cache: memory/redis/hybrid `FullWeaverCache` built by `HybridCacheBuilder`
+   - Initializers: DBLP initializers for papers/authors/venues/venue-index
+
+### Runtime Logic (from types to behavior)
+
+For each BFS step, the pipeline does:
+
+1. Resolve entity identity using identifiers (cache registry may merge aliases).
+2. Load parent info from cache; on miss, fetch from `DataSrc`, save to `DataDst`, then cache it.
+3. Load pending children from cache; on miss, fetch from `DataSrc`, register them in pending cache.
+4. For each child: fetch/save/cache child info if needed.
+5. Create link in `DataDst` only if commit cache says the link is new.
+
+This design gives:
+- low duplicate API calls (info/pending caching),
+- low duplicate writes (committed-link tracking),
+- stable cross-source identity (identifier merging).
+
+### How to Use This Model
+
+- **CLI path:** choose one implementation per layer (initializer + datasrc + cache + datadst), then run BFS.
+- **Python API path:** instantiate those same layer objects directly and call `await weaver.bfs(...)`.
+
+In both paths, usage is the same architecture: only implementations change.
+
+### What You Can Extend
+
+You can extend at any layer independently:
+
+- **New `DataSrc`**: implement the `DataSrc` abstract methods for your API.
+- **New `DataDst`**: implement `DataDst` to write into another graph/DB.
+- **New cache backend**: implement `IdentifierRegistryIface`, `InfoStorageIface`, `PendingListStorageIface`, `CommittedLinkStorageIface`, then compose with cache classes.
+- **New initializer**: implement one of `fetch_papers()`, `fetch_authors()`, or `fetch_venues()`.
+- **New traversal recipe**: compose existing relation interfaces into a new weaver class.
+
+### Built-in Extension Examples
+
+1. **Switch data source without changing traversal logic**
+   - `DBLPDataSrc` provides strong bibliographic/venue coverage.
+   - `SemanticScholarDataSrc` provides references/citations APIs.
+   - Both satisfy `DataSrc`, so the same weaver can run with either source.
+
+2. **Switch cache backend without changing source/destination**
+   - Use `HybridCacheBuilder().with_all_memory()` for local runs.
+   - Use redis components (`with_all_redis(...)` or mixed `with_memory_*` + `with_redis_*`) for persistent/distributed runs.
+   - Traversal code remains unchanged because all variants satisfy the same cache interfaces.
+
+3. **Expand initializer granularity**
+   - `DBLPAuthorsInitializer` seeds by author pids.
+   - `DBLPVenueIndexInitializer` expands a DBLP venue index into many venues before BFS.
+   - Both plug into the same initializer contract and only change the BFS starting frontier.
+
+4. **Create a custom combined weaver**
+   - Existing `Author2Paper2VenueWeaver` is a template: it composes relation interfaces and defines `init()` + `bfs_once()`.
+   - You can build another combination (for example including reference/citation traversal) by composing the corresponding interfaces with a compatible cache.
+
 ## Command-Line Options
 
 ### Weaver Options
