@@ -3,6 +3,7 @@ Command-line argument configuration for PaperWeaver Initializers.
 
 Supports:
 - DBLP: Initialize with DBLP record keys, person IDs, venue keys, or venue index keys
+- CrossRef: Initialize with DOIs
 """
 
 import argparse
@@ -14,13 +15,20 @@ from .dblp import (
     DBLPVenuesInitializer,
     DBLPVenueIndexInitializer,
 )
+from .crossref import CrossRefPapersInitializer
 
 
 def add_initializer_args(parser: argparse.ArgumentParser) -> None:
     """Add initializer-related command-line arguments."""
     parser.add_argument(
         "--init",
-        choices=["dblp-papers", "dblp-authors", "dblp-venues", "dblp-venue-index"],
+        choices=[
+            "dblp-papers",
+            "dblp-authors",
+            "dblp-venues",
+            "dblp-venue-index",
+            "crossref-papers",
+        ],
         default="dblp-authors",
         help="Initializer mode (default: dblp-authors)"
     )
@@ -51,6 +59,14 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
         help="DBLP venue index keys to initialize venues (e.g., db/conf/cvpr db/journals/tpds)"
     )
 
+    # CrossRef specific
+    parser.add_argument(
+        "--init-crossref-dois",
+        nargs="+",
+        default=[],
+        help="DOIs to initialize papers (e.g., 10.1109/CVPR.2016.90 https://doi.org/10.1000/xyz123)"
+    )
+
 
 def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerIface:
     """Create an initializer from parsed command-line arguments."""
@@ -63,5 +79,7 @@ def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerI
             return DBLPVenuesInitializer(list(args.init_dblp_venue_keys))
         case "dblp-venue-index":
             return DBLPVenueIndexInitializer(list(args.init_dblp_venue_index_keys))
+        case "crossref-papers":
+            return CrossRefPapersInitializer(list(args.init_crossref_dois))
         case _:
             raise ValueError(f"Unknown initializer: {args.init}")

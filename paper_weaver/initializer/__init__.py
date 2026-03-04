@@ -10,6 +10,7 @@ from .dblp import (
     DBLPVenuesInitializer,
     DBLPVenueIndexInitializer,
 )
+from .crossref import CrossRefPapersInitializer
 from .argparse import (
     add_initializer_args,
     create_initializer_from_args,
@@ -21,6 +22,8 @@ __all__ = [
     "DBLPAuthorsInitializer",
     "DBLPVenuesInitializer",
     "DBLPVenueIndexInitializer",
+    # CrossRef Initializers
+    "CrossRefPapersInitializer",
     # Argparse
     "add_initializer_args",
     "create_initializer_from_args",
