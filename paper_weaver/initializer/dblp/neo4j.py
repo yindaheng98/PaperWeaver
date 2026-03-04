@@ -19,4 +19,4 @@ class Neo4JDBLPAuthorsInitializer(AuthorsWeaverInitializerIface):
 class Neo4JDBLPVenuesInitializer(VenuesWeaverInitializerIface):
     pass
 
-# TODO: Load DBLP from Neo4J
+# TODO: Match and return DBLP keys from Neo4J like paper_weaver/initializer/crossref/neo4j.py

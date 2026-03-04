@@ -16,6 +16,7 @@ from .dblp import (
     DBLPVenueIndexInitializer,
 )
 from .crossref import CrossRefPapersInitializer
+from .crossref import CrossRefNeo4JPapersInitializer
 
 
 def add_initializer_args(parser: argparse.ArgumentParser) -> None:
@@ -28,6 +29,7 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
             "dblp-venues",
             "dblp-venue-index",
             "crossref-papers",
+            "crossref-neo4j-papers",
         ],
         default="dblp-authors",
         help="Initializer mode (default: dblp-authors)"
@@ -66,6 +68,12 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
         default=[],
         help="DOIs to initialize papers (e.g., 10.1109/CVPR.2016.90 https://doi.org/10.1000/xyz123)"
     )
+    parser.add_argument(
+        "--init-crossref-neo4j-patterns",
+        nargs="+",
+        default=[],
+        help="Cypher patterns that bind Paper node as `paper` for Neo4j-based CrossRef initialization"
+    )
 
 
 def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerIface:
@@ -81,5 +89,13 @@ def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerI
             return DBLPVenueIndexInitializer(list(args.init_dblp_venue_index_keys))
         case "crossref-papers":
             return CrossRefPapersInitializer(list(args.init_crossref_dois))
+        case "crossref-neo4j-papers":
+            return CrossRefNeo4JPapersInitializer(
+                patterns=list(args.init_crossref_neo4j_patterns),
+                uri=args.datadst_neo4j_uri,
+                user=args.datadst_neo4j_user,
+                password=args.datadst_neo4j_password,
+                database=args.datadst_neo4j_database,
+            )
         case _:
             raise ValueError(f"Unknown initializer: {args.init}")
