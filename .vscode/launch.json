@@ -65,6 +65,16 @@
             ]
         },
         {
+            "name": "pytest crossref datasrc",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/datasrc/crossref",
+                "-v"
+            ]
+        },
+        {
             "name": "pytest neo4j datadst",
             "type": "debugpy",
             "request": "launch",

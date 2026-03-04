@@ -146,7 +146,7 @@ def work_json_to_info(work: dict) -> dict:
 
     container_title = work.get("container-title")
     if container_title:
-        info["container-title"] = container_title
+        info["crossref:container-title"] = container_title
 
     publisher = work.get("publisher")
     if publisher:
@@ -184,15 +184,7 @@ def work_json_to_info(work: dict) -> dict:
     if cr_type:
         info["crossref:type"] = cr_type
 
-    member = work.get("member")
-    if member:
-        info["crossref:member"] = member
-
-    prefix = work.get("prefix")
-    if prefix:
-        info["crossref:prefix"] = prefix
-
-    for date_field in ("created", "deposited", "indexed", "published-print", "published-online", "published", "issued", "posted", "accepted"):
+    for date_field in ("created", "published-print", "published-online", "published", "issued", "posted", "accepted"):
         date_obj = work.get(date_field)
         if date_obj:
             date_str = _date_parts_to_str(date_obj)
