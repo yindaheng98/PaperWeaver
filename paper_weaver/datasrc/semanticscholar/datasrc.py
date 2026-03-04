@@ -21,7 +21,7 @@ class SemanticScholarDataSrc(CachedAsyncPool, DataSrc):
 
     Uses CachedAsyncPool for caching and concurrency control.
     Identifiers use prefixes:
-    - Paper: "ss:<paperId>", "doi:<doi>"
+    - Paper: "ss:<paperId>", "https://doi.org/<doi>"
     - Author: "ss-author:<authorId>"
     """
 
@@ -65,7 +65,7 @@ class SemanticScholarDataSrc(CachedAsyncPool, DataSrc):
         for ident in paper.identifiers:
             if ident.startswith("ss:"):
                 return ident[3:]  # Remove "ss:" prefix
-            if ident.startswith("doi:"):
+            if ident.startswith("https://doi.org/"):
                 return ident  # DOI can be used directly as paper ID
         return None
 
@@ -83,7 +83,7 @@ class SemanticScholarDataSrc(CachedAsyncPool, DataSrc):
             identifiers.add(f"ss:{data['paperId']}")
         if 'externalIds' in data and data['externalIds']:
             if 'DOI' in data['externalIds'] and data['externalIds']['DOI']:
-                identifiers.add(f"doi:{data['externalIds']['DOI']}")
+                identifiers.add(f"https://doi.org/{data['externalIds']['DOI'].strip().lower()}")
             if 'DBLP' in data['externalIds'] and data['externalIds']['DBLP']:
                 identifiers.add(f"dblp:{data['externalIds']['DBLP']}")
             if 'ArXiv' in data['externalIds'] and data['externalIds']['ArXiv']:

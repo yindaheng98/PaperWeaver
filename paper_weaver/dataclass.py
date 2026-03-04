@@ -5,7 +5,7 @@ from typing import Tuple
 
 @dataclass
 class Paper:
-    identifiers: set[str]  # example: ["doi:10.1000/xyz123"]
+    identifiers: set[str]  # example: ["https://doi.org/10.1000/xyz123"]
 
     def __repr__(self) -> str:
         ids = sorted(self.identifiers)[:2]
