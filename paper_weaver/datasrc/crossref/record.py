@@ -128,14 +128,13 @@ def work_json_to_info(work: dict) -> dict:
     Common keys:
     - title, abstract, year, pages, volume, issue, number
     - container_title (journal/proceedings name), issn, isbn
-    - urls (from link field)
+    - resource, links (from link field)
     """
     info = {}
 
     # Common keys
-    titles = [work.get("title")] if isinstance(work.get("title"), str) else work.get("title")
+    titles = work.get("title")
     if titles:
-        info["title"] = titles[0]
         info["crossref:title"] = titles
 
     abstract = work.get("abstract")
@@ -182,20 +181,23 @@ def work_json_to_info(work: dict) -> dict:
     if doi:
         info["doi"] = doi
 
-    urls = []
-    if doi:
-        urls.append(f"https://doi.org/{doi}")
     resource = work.get("resource")
     if resource and isinstance(resource, dict):
         primary = resource.get("primary")
         if primary and isinstance(primary, dict) and primary.get("URL"):
-            urls.append(primary["URL"])
+            info["crossref:resource"] = primary["URL"]
+
     links = work.get("link")
-    for link in links:
-        if link.get("URL"):
-            urls.append(link["URL"])
-    if urls:
-        info["urls"] = urls
+    if links:
+        for link in links:
+            if link.get("URL"):
+                if "crossref:links" not in info:
+                    info["crossref:links"] = []
+                info["crossref:links"].append(link["URL"])
+
+    url = work.get("URL")
+    if url:
+        info["crossref:url"] = url
 
     # CrossRef-specific keys
     cr_type = work.get("type")
