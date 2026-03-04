@@ -15,7 +15,6 @@ Venue Key: db/conf/cvpr/cvpr2016 (CVPR 2016)
 Cache: Uses Redis at localhost:6379 if available, otherwise falls back to MemoryDataSrcCache.
 """
 
-import os
 import pytest
 import pytest_asyncio
 
@@ -56,11 +55,6 @@ TEST_AUTHOR_NAME = "Kaiming He"
 TEST_VENUE_KEY = "db/conf/cvpr/cvpr2016"  # CVPR 2016
 
 
-def get_http_proxy() -> str | None:
-    """Get HTTP proxy from environment variable."""
-    return os.getenv("HTTP_PROXY")
-
-
 @pytest_asyncio.fixture
 async def cache():
     """
@@ -84,15 +78,13 @@ async def cache():
 
 @pytest.fixture
 def datasrc(cache):
-    """DataSrc with real API access. Uses HTTP_PROXY env var if set."""
+    """DataSrc with real API access."""
     return DBLPDataSrc(
         cache,
         max_concurrent=3,
         record_cache_ttl=3600,
         person_cache_ttl=3600,
-        venue_cache_ttl=3600,
-        http_proxy=get_http_proxy(),
-        http_timeout=30
+        venue_cache_ttl=3600
     )
 
 
@@ -146,8 +138,8 @@ class TestRealPaperAPI:
             author_names = set()
             for author in authors:
                 for ident in author.identifiers:
-                    if ident.startswith("name:"):
-                        author_names.add(ident[5:])
+                    if ident.startswith("dblp:name:"):
+                        author_names.add(ident[10:])
 
             print(f"\n✓ Found {len(authors)} authors")
             print(f"  Author names: {author_names}")
@@ -394,7 +386,7 @@ class TestRealWorkflow:
 
             for i, author in enumerate(authors[:5]):
                 author_name = next(
-                    (ident[5:] for ident in author.identifiers if ident.startswith("name:")),
+                    (ident[10:] for ident in author.identifiers if ident.startswith("dblp:name:")),
                     "?"
                 )
                 print(f"   - Author {i+1}: {author_name}")
@@ -452,7 +444,7 @@ class TestRealWorkflow:
             print(f"\n2. Authors ({len(authors)}):")
             for author in authors:
                 name = next(
-                    (ident[5:] for ident in author.identifiers if ident.startswith("name:")),
+                    (ident[10:] for ident in author.identifiers if ident.startswith("dblp:name:")),
                     "?"
                 )
                 print(f"   - {name}")
@@ -570,7 +562,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_missing_author_identifier(self, datasrc):
         """Test handling of author without DBLP identifier."""
-        author = Author(identifiers={"name:Unknown Author"})
+        author = Author(identifiers={"dblp:name:Unknown Author"})
 
         with pytest.raises(ValueError, match="No valid DBLP identifier"):
             await datasrc.get_author_info(author)
