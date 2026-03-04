@@ -176,6 +176,12 @@ class TestSemanticScholarDataSrcHelpers:
         result = datasrc._extract_ss_paper_id(paper)
         assert result == "doi:10.1234/test"
 
+    def test_extract_ss_paper_id_with_doi_url(self, datasrc):
+        """Test extracting paper ID with DOI URL format."""
+        paper = Paper(identifiers={"https://doi.org/10.1234/test"})
+        result = datasrc._extract_ss_paper_id(paper)
+        assert result == "https://doi.org/10.1234/test"
+
     def test_extract_ss_paper_id_no_valid_id(self, datasrc):
         """Test extracting paper ID when no valid ID exists."""
         paper = Paper(identifiers={"unknown:12345"})
@@ -184,10 +190,10 @@ class TestSemanticScholarDataSrcHelpers:
 
     def test_extract_ss_paper_id_prefers_ss_over_doi(self, datasrc):
         """Test that ss: prefix is found even with multiple identifiers."""
-        paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}", "doi:10.1234/test"})
+        paper = Paper(identifiers={f"ss:{TEST_PAPER_ID}", "https://doi.org/10.1234/test"})
         result = datasrc._extract_ss_paper_id(paper)
         # Should find one of them (depends on set iteration order)
-        assert result in [TEST_PAPER_ID, "doi:10.1234/test"]
+        assert result in [TEST_PAPER_ID, "https://doi.org/10.1234/test"]
 
     def test_extract_ss_author_id_with_prefix(self, datasrc):
         """Test extracting author ID with ss-author: prefix."""
@@ -206,7 +212,7 @@ class TestSemanticScholarDataSrcHelpers:
         paper = datasrc._paper_from_ss_data(MOCK_PAPER_RESPONSE)
 
         assert f"ss:{TEST_PAPER_ID}" in paper.identifiers
-        assert "doi:10.48550/arXiv.1706.03762" in paper.identifiers
+        assert "https://doi.org/10.48550/arXiv.1706.03762" in paper.identifiers
         assert "arxiv:1706.03762" in paper.identifiers
         assert "dblp:conf/nips/VaswaniSPUJGKP17" in paper.identifiers
 
@@ -278,7 +284,7 @@ class TestSemanticScholarDataSrcPaperMethods:
             assert info["paperId"] == TEST_PAPER_ID
             assert info["title"] == "Attention Is All You Need"
             assert f"ss:{TEST_PAPER_ID}" in updated_paper.identifiers
-            assert "doi:10.48550/arXiv.1706.03762" in updated_paper.identifiers
+            assert "https://doi.org/10.48550/arXiv.1706.03762" in updated_paper.identifiers
 
     @pytest.mark.asyncio
     async def test_get_paper_info_no_valid_id(self, datasrc):
@@ -784,8 +790,10 @@ class TestSemanticScholarDataSrcWithDOI:
             updated_paper, info = await datasrc.get_paper_info(paper)
 
             assert info["paperId"] == TEST_PAPER_ID
-            # Original DOI identifier should be preserved
+            # Original DOI identifier should be preserved for backward compatibility
             assert "doi:10.48550/arXiv.1706.03762" in updated_paper.identifiers
+            # Canonical DOI URL format should be present
+            assert "https://doi.org/10.48550/arXiv.1706.03762" in updated_paper.identifiers
             # SS paper ID should be added
             assert f"ss:{TEST_PAPER_ID}" in updated_paper.identifiers
 
