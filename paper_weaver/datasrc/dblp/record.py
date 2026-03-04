@@ -5,6 +5,8 @@ Provides functions to convert RecordParser/RecordPageParser to Paper and info di
 and extract DBLP identifiers from Paper/Author objects.
 """
 
+import datetime
+
 from ...dataclass import Paper
 from ..title_hash import title_hash
 from dblp_webxml_parser import RecordParser
@@ -82,7 +84,10 @@ def record_to_info(record: RecordParser) -> dict:
     if record.type:
         info["dblp:type"] = record.type
     if record.mdate:
-        info["dblp:mdate"] = record.mdate
+        try:
+            info["dblp:mdate"] = datetime.date.fromisoformat(record.mdate)
+        except ValueError:
+            info["dblp:mdate"] = record.mdate
     if record.url:
         info["dblp:url"] = record.url
     if record.crossref:
@@ -100,7 +105,10 @@ def record_to_info(record: RecordParser) -> dict:
     if record.pages:
         info["pages"] = record.pages
     if record.year:
-        info["year"] = record.year
+        try:
+            info["year"] = int(record.year)
+        except ValueError:
+            info["year"] = record.year
     if record.month:
         info["month"] = record.month
     if record.volume:

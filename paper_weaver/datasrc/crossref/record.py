@@ -18,6 +18,8 @@ Key work fields used:
 - abstract, ISSN, ISBN, subject, link, license, funder
 """
 
+import datetime
+
 from ...dataclass import Paper, Author
 from ..title_hash import title_hash
 
@@ -38,14 +40,14 @@ def paper_to_doi(paper: Paper) -> str | None:
     return None
 
 
-def _extract_year(work: dict) -> str | None:
-    """Extract publication year from work data, trying multiple date fields."""
+def _extract_year(work: dict) -> int | None:
+    """Extract publication year as int from work data, trying multiple date fields."""
     for field in ("published-print", "published-online", "published", "issued", "created"):
         date_obj = work.get(field)
         if date_obj and "date-parts" in date_obj:
             parts = date_obj["date-parts"]
             if parts and parts[0] and parts[0][0]:
-                return str(parts[0][0])
+                return int(parts[0][0])
     return None
 
 
@@ -75,20 +77,36 @@ def work_json_to_paper(work: dict) -> Paper:
     return Paper(identifiers=identifiers)
 
 
-def _date_parts_to_str(date_obj: dict | None) -> str | None:
-    """Convert CrossRef date-parts structure to a string like '2025-08-13'."""
-    if not date_obj or "date-parts" not in date_obj:
+def _parse_date_obj(date_obj: dict | None) -> datetime.datetime | datetime.date | int | None:
+    """
+    Convert a CrossRef date object to the most precise temporal type available.
+
+    Priority: date-time (ISO 8601) > timestamp (ms) > date-parts.
+    For date-parts: 3 parts -> date, 2 parts -> date (1st of month), 1 part -> int (year).
+    """
+    if not date_obj:
+        return None
+
+    dt_str = date_obj.get("date-time")
+    if dt_str:
+        return datetime.datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+
+    ts = date_obj.get("timestamp")
+    if ts is not None:
+        return datetime.datetime.fromtimestamp(ts / 1000, tz=datetime.timezone.utc)
+
+    if "date-parts" not in date_obj:
         return None
     parts = date_obj["date-parts"]
     if not parts or not parts[0]:
         return None
     p = parts[0]
-    if len(p) >= 3:
-        return f"{p[0]}-{p[1]:02d}-{p[2]:02d}"
-    elif len(p) >= 2:
-        return f"{p[0]}-{p[1]:02d}"
-    elif len(p) >= 1:
-        return str(p[0])
+    if len(p) >= 3 and p[0] and p[1] and p[2]:
+        return datetime.date(p[0], p[1], p[2])
+    elif len(p) >= 2 and p[0] and p[1]:
+        return datetime.date(p[0], p[1], 1)
+    elif len(p) >= 1 and p[0]:
+        return int(p[0])
     return None
 
 
@@ -184,12 +202,12 @@ def work_json_to_info(work: dict) -> dict:
     if cr_type:
         info["crossref:type"] = cr_type
 
-    for date_field in ("created", "published-print", "published-online", "published", "issued", "posted", "accepted"):
+    for date_field in ("created", "deposited", "indexed", "published-print", "published-online", "published", "issued", "posted", "accepted"):
         date_obj = work.get(date_field)
         if date_obj:
-            date_str = _date_parts_to_str(date_obj)
-            if date_str:
-                info[f"crossref:{date_field}"] = date_str
+            parsed = _parse_date_obj(date_obj)
+            if parsed is not None:
+                info[f"crossref:{date_field}"] = parsed
 
     short_ct = work.get("short-container-title")
     if short_ct:

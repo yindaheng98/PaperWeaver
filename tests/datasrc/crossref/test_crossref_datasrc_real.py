@@ -13,6 +13,8 @@ Paper DOI: 10.1109/CVPR.2016.90 (Deep Residual Learning for Image Recognition)
 Cache: Uses Redis at localhost:6379 if available, otherwise falls back to MemoryDataSrcCache.
 """
 
+import datetime
+
 import pytest
 import pytest_asyncio
 
@@ -92,6 +94,7 @@ class TestRealPaperAPI:
             assert "title" in info
             assert TEST_TITLE_SUBSTR in info["title"]
             assert "year" in info
+            assert isinstance(info["year"], int)
 
             has_doi = any(
                 ident.startswith("https://doi.org/")
@@ -100,7 +103,7 @@ class TestRealPaperAPI:
             assert has_doi
 
             print(f"\n✓ Paper: {info['title']}")
-            print(f"  Year: {info.get('year', 'N/A')}")
+            print(f"  Year: {info.get('year', 'N/A')} (type={type(info['year']).__name__})")
             print(f"  Type: {info.get('crossref:type', 'N/A')}")
             print(f"  Publisher: {info.get('publisher', 'N/A')}")
             print(f"  Identifiers: {updated_paper.identifiers}")
@@ -136,6 +139,36 @@ class TestRealPaperAPI:
             )
             assert has_title_hash
             print("\n✓ title_hash identifiers generated")
+        except ValueError as e:
+            pytest.skip(f"API request failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_get_paper_info_temporal_types(self, datasrc):
+        """Test that date fields use proper temporal types."""
+        paper = Paper(identifiers={TEST_DOI_URL})
+
+        try:
+            _, info = await datasrc.get_paper_info(paper)
+
+            assert isinstance(info["year"], int)
+
+            # created/deposited/indexed have date-time → datetime.datetime
+            if "crossref:created" in info:
+                assert isinstance(info["crossref:created"], datetime.datetime)
+                print(f"  crossref:created = {info['crossref:created']} ({type(info['crossref:created']).__name__})")
+            if "crossref:deposited" in info:
+                assert isinstance(info["crossref:deposited"], datetime.datetime)
+            if "crossref:indexed" in info:
+                assert isinstance(info["crossref:indexed"], datetime.datetime)
+
+            # published-print only has date-parts [year, month] → datetime.date
+            if "crossref:published-print" in info:
+                assert isinstance(info["crossref:published-print"], (datetime.date, int))
+                print(f"  crossref:published-print = {info['crossref:published-print']} ({type(info['crossref:published-print']).__name__})")
+            if "crossref:issued" in info:
+                assert isinstance(info["crossref:issued"], (datetime.date, int))
+
+            print("\n✓ All date fields use proper temporal types")
         except ValueError as e:
             pytest.skip(f"API request failed: {e}")
 
