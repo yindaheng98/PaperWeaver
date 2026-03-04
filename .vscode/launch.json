@@ -92,19 +92,26 @@
             "args": [
                 "-v",
                 "--weaver-type=a2p2v",
+                // "--weaver-type=p2r2a",
                 "--cache-mode=redis",
                 "--cache-redis-url=redis://localhost:6379",
                 "--datasrc-type=dblp",
+                // "--datasrc-type=crossref",
                 "--datasrc-cache-mode=redis",
                 "--datasrc-redis-url=redis://localhost:6379",
                 "--datadst-type=neo4j",
                 "--max-iterations=3",
                 "--init=dblp-venue-index",
+                // "--init=crossref-papers",
                 "--datasrc-max-concurrent=2",
                 "--init-dblp-venue-index-keys",
                 "db/conf/cvpr",
                 "db/journals/pami",
-            ]
+                // "--init-crossref-dois",
+                // "10.1109/CVPR.2016.90",
+                // "https://doi.org/10.1145/3757377.3763975",
+            ],
+            "justMyCode": false
         },
     ]
 }

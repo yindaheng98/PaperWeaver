@@ -8,3 +8,4 @@ from .iface_p2r import Paper2ReferencesWeaverIface, Paper2ReferencesWeaverCacheI
 from .iface_p2v import Paper2VenuesWeaverIface, Paper2VenuesWeaverCacheIface
 from .iface_v2p import Venue2PapersWeaverIface, Venue2PapersWeaverCacheIface
 from .weaver_a2p2v import Author2Paper2VenueCache, Author2Paper2VenueWeaver
+from .weaver_p2r2a import Paper2Reference2AuthorCache, Paper2Reference2AuthorWeaver

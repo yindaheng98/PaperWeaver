@@ -4,6 +4,7 @@ Command-line argument configuration for PaperWeaver DataSrc.
 Supports:
 - SemanticScholar: Semantic Scholar API
 - DBLP: DBLP API
+- CrossRef: CrossRef REST API
 """
 
 import argparse
@@ -12,11 +13,12 @@ from ..dataclass import DataSrc
 from .cache_impl import MemoryDataSrcCache, RedisDataSrcCache
 from .semanticscholar import SemanticScholarDataSrc
 from .dblp import DBLPDataSrc
+from .crossref import CrossRefDataSrc
 
 
 def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     """Add DataSrc-related command-line arguments."""
-    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp"], default="dblp", help="DataSrc type (default: dblp)")
+    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp", "crossref"], default="dblp", help="DataSrc type (default: dblp)")
 
     # DataSrc cache
     parser.add_argument("--datasrc-cache-mode", choices=["memory", "redis"], default="memory", help="DataSrc cache backend (default: memory)")
@@ -34,6 +36,10 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--datasrc-dblp-record-ttl", type=int, help="DBLP record cache TTL seconds (default: None, permanent, publication records rarely change)")
     parser.add_argument("--datasrc-dblp-person-ttl", type=int, default=604800, help="DBLP person cache TTL seconds (default: 604800 = 7 days, person info may be updated)")
     parser.add_argument("--datasrc-dblp-venue-ttl", type=int, default=604800, help="DBLP venue cache TTL seconds (default: 604800 = 7 days, venue info may be updated)")
+
+    # CrossRef specific
+    parser.add_argument("--datasrc-crossref-cache-ttl", type=int, default=604800, help="CrossRef cache TTL in seconds (default: 604800 = 7 days)")
+    parser.add_argument("--datasrc-crossref-mailto", help="Contact email for CrossRef polite pool (recommended for higher rate limits)")
 
 
 def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
@@ -66,6 +72,13 @@ def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
                 record_cache_ttl=args.datasrc_dblp_record_ttl,
                 person_cache_ttl=args.datasrc_dblp_person_ttl,
                 venue_cache_ttl=args.datasrc_dblp_venue_ttl
+            )
+        case "crossref":
+            return CrossRefDataSrc(
+                cache=cache,
+                max_concurrent=args.datasrc_max_concurrent,
+                cache_ttl=args.datasrc_crossref_cache_ttl,
+                mailto=args.datasrc_crossref_mailto
             )
         case _:
             raise ValueError(f"Unknown datasrc type: {args.datasrc_type}")
