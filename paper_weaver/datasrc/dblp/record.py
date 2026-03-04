@@ -116,5 +116,9 @@ def record_to_info(record: RecordParser) -> dict:
     ees = list(record.ees)
     if ees:
         info["urls"] = ees
+        for ee in ees:
+            if ee.startswith("https://doi.org/"):
+                info["doi"] = ee[len("https://doi.org/"):]
+                break
 
     return info
