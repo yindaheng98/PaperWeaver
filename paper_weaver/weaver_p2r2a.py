@@ -22,11 +22,6 @@ class Paper2Reference2AuthorWeaver(SimpleWeaver, Paper2ReferencesWeaverIface, Pa
             raise TypeError("Paper2Reference2AuthorWeaver requires PapersWeaverInitializerIface")
         super().__init__(src=src, dst=dst, cache=cache, initializer=initializer)
 
-    async def init(self) -> int:
-        paper_succ_count = await super().init()  # the init in PapersWeaverInitializerIface
-        ref_count = await self.all_paper_to_references()
-        return paper_succ_count + ref_count
-
     async def bfs_once(self):
         ref_count = await self.all_paper_to_references()
         author_count = await self.all_paper_to_authors()
