@@ -59,7 +59,7 @@ class CrossRefDataSrc(CachedAsyncPool, DataSrc):
             mailto: Contact email for CrossRef polite pool (recommended)
         """
         CachedAsyncPool.__init__(self, cache, max_concurrent)
-        self._cache_ttl = cache_ttl if cache_ttl is not None else self.DEFAULT_CACHE_TTL
+        self._cache_ttl = cache_ttl
         self._mailto = mailto
 
     # ==================== Paper Methods ====================

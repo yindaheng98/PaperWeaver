@@ -220,22 +220,12 @@ def work_json_to_authors(work: dict) -> list[Author]:
     Authors without ORCID are skipped.
     """
     authors = []
-    author_list = work.get("author", [])
-    if not author_list:
-        return authors
-
-    for author_data in author_list:
+    for author_data in work.get("author", []):
         orcid_url = author_data.get("ORCID")
         if not orcid_url:
             continue
-
-        if orcid_url.startswith("https://orcid.org/"):
-            orcid = orcid_url[len("https://orcid.org/"):]
-        else:
-            orcid = orcid_url
-
+        orcid = orcid_url[len("https://orcid.org/"):] if orcid_url.startswith("https://orcid.org/") else orcid_url
         authors.append(Author(identifiers={f"orcid:{orcid}"}))
-
     return authors
 
 
@@ -247,14 +237,9 @@ def work_json_to_references(work: dict) -> list[Paper]:
     since they cannot be uniquely identified.
     """
     papers = []
-    ref_list = work.get("reference", [])
-    if not ref_list:
-        return papers
-
-    for ref in ref_list:
+    for ref in work.get("reference", []):
         doi = ref.get("DOI")
-        if doi:
-            identifiers = {f"{CROSSREF_DOI_URL_PREFIX}{doi}"}
-            papers.append(Paper(identifiers=identifiers))
-
+        if not doi:
+            continue
+        papers.append(Paper(identifiers={f"https://doi.org/{doi}"}))
     return papers
