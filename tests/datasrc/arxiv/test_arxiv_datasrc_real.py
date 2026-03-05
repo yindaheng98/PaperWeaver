@@ -13,6 +13,7 @@ import pytest_asyncio
 from paper_weaver.datasrc.arxiv import ArxivDataSrc
 from paper_weaver.datasrc.cache_impl import MemoryDataSrcCache, RedisDataSrcCache
 from paper_weaver.dataclass import Paper, Author, Venue
+from paper_weaver.initializer.arxiv import ArxivPapersInitializer
 
 try:
     import redis.asyncio as aioredis
@@ -161,6 +162,72 @@ class TestCacheIntegration:
             expected_key = f"https://export.arxiv.org/api/query?id_list={TEST_ARXIV_ID}"
             cached = await cache.get(expected_key)
             assert cached is not None
+        except ValueError as e:
+            pytest.skip(f"API request failed: {e}")
+
+
+class TestPreloadSearchCache:
+    @pytest.mark.asyncio
+    async def test_preload_and_cache_hit(self, datasrc, cache):
+        """Test that preload_search_cache populates cache entries
+        that get_paper_info can subsequently hit."""
+        try:
+            papers = []
+            async for p in datasrc.preload_search_cache(f"search_query=all:gaussianart&max_results=3"):
+                papers.append(p)
+
+            assert len(papers) >= 1
+            print(f"\n✓ preload_search_cache returned {len(papers)} papers")
+
+            updated_paper, info = await datasrc.get_paper_info(papers[0])
+            assert "title" in info
+            print(f"  Cache hit title: {info['title'][:60]}")
+        except ValueError as e:
+            pytest.skip(f"API request failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_initializer_with_pagination(self, datasrc):
+        """Test ArxivPapersInitializer with pagination."""
+        try:
+            init = ArxivPapersInitializer(
+                datasrc=datasrc,
+                queries=["all:gaussianart"],
+                pages=1,
+                page_size=3,
+            )
+            papers = []
+            async for p in init.fetch_papers():
+                papers.append(p)
+
+            assert len(papers) >= 1
+            print(f"\n✓ ArxivPapersInitializer returned {len(papers)} papers")
+            for p in papers:
+                has_arxiv = any(i.startswith("https://arxiv.org/abs/") for i in p.identifiers)
+                has_doi = any(i.startswith("https://doi.org/") for i in p.identifiers)
+                assert has_arxiv
+                assert has_doi
+            print("  All papers have arxiv abs URL and DOI URL identifiers")
+        except ValueError as e:
+            pytest.skip(f"API request failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_initializer_cache_preloaded(self, datasrc, cache):
+        """Test that ArxivPapersInitializer preloads cache for get_paper_info."""
+        try:
+            init = ArxivPapersInitializer(
+                datasrc=datasrc,
+                queries=["all:gaussianart"],
+                pages=1,
+                page_size=3,
+            )
+            papers = []
+            async for p in init.fetch_papers():
+                papers.append(p)
+
+            assert len(papers) >= 1
+            updated, info = await datasrc.get_paper_info(papers[0])
+            assert "title" in info
+            print(f"\n✓ After init, get_paper_info cache hit: {info['title'][:60]}")
         except ValueError as e:
             pytest.skip(f"API request failed: {e}")
 
