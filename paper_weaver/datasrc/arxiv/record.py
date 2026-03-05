@@ -12,14 +12,18 @@ DOI_URL_PREFIX = "https://doi.org/"
 ARXIV_DOI_PREFIX = "10.48550/arXiv."
 
 
-def arxiv_to_doi(arxiv_url: str) -> str:
-    if not arxiv_url.startswith(ARXIV_ABS_PREFIX):
-        raise ValueError(f"Not an arXiv abs URL: {arxiv_url}")
-    arxiv_id = arxiv_url[len(ARXIV_ABS_PREFIX):]
+def strip_arxiv_version(arxiv_id: str) -> str:
     if "v" in arxiv_id:
         base, ver = arxiv_id.rsplit("v", 1)
         if ver.isdigit() and base:
-            arxiv_id = base
+            return base
+    return arxiv_id
+
+
+def arxiv_to_doi(arxiv_url: str) -> str:
+    if not arxiv_url.startswith(ARXIV_ABS_PREFIX):
+        raise ValueError(f"Not an arXiv abs URL: {arxiv_url}")
+    arxiv_id = strip_arxiv_version(arxiv_url[len(ARXIV_ABS_PREFIX):])
     return f"{DOI_URL_PREFIX}{ARXIV_DOI_PREFIX}{arxiv_id}"
 
 
