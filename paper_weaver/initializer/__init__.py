@@ -11,6 +11,7 @@ from .dblp import (
     DBLPVenueIndexInitializer,
 )
 from .crossref import CrossRefPapersInitializer
+from .arxiv import ArxivPapersInitializer
 from .argparse import (
     add_initializer_args,
     create_initializer_from_args,
@@ -24,6 +25,8 @@ __all__ = [
     "DBLPVenueIndexInitializer",
     # CrossRef Initializers
     "CrossRefPapersInitializer",
+    # arXiv Initializers
+    "ArxivPapersInitializer",
     # Argparse
     "add_initializer_args",
     "create_initializer_from_args",

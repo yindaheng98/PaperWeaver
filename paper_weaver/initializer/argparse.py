@@ -4,6 +4,7 @@ Command-line argument configuration for PaperWeaver Initializers.
 Supports:
 - DBLP: Initialize with DBLP record keys, person IDs, venue keys, or venue index keys
 - CrossRef: Initialize with DOIs
+- arXiv: Initialize with arXiv search query
 """
 
 import argparse
@@ -17,6 +18,8 @@ from .dblp import (
 )
 from .crossref import CrossRefPapersInitializer
 from .crossref import CrossRefNeo4JPapersInitializer
+from .arxiv import ArxivPapersInitializer
+from ..datasrc.argparse import create_datasrc_from_args
 
 
 def add_initializer_args(parser: argparse.ArgumentParser) -> None:
@@ -30,6 +33,7 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
             "dblp-venue-index",
             "crossref-papers",
             "crossref-neo4j-papers",
+            "arxiv-query",
         ],
         default="dblp-authors",
         help="Initializer mode (default: dblp-authors)"
@@ -75,6 +79,26 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
         help="Cypher patterns that bind Paper node as `paper` for Neo4j-based CrossRef initialization"
     )
 
+    # arXiv specific
+    parser.add_argument(
+        "--init-arxiv-queries",
+        nargs="+",
+        default=[],
+        help="arXiv search queries (e.g., 'all:machine learning' 'cat:cs.CV')"
+    )
+    parser.add_argument(
+        "--init-arxiv-pages",
+        type=int,
+        default=1,
+        help="Number of query pages to fetch per query (default: 1)"
+    )
+    parser.add_argument(
+        "--init-arxiv-page-size",
+        type=int,
+        default=10,
+        help="Results per page (default: 10)"
+    )
+
 
 def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerIface:
     """Create an initializer from parsed command-line arguments."""
@@ -96,6 +120,14 @@ def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerI
                 user=args.datadst_neo4j_user,
                 password=args.datadst_neo4j_password,
                 database=args.datadst_neo4j_database,
+            )
+        case "arxiv-query":
+            datasrc = create_datasrc_from_args(args)
+            return ArxivPapersInitializer(
+                datasrc=datasrc,
+                queries=list(args.init_arxiv_queries),
+                pages=args.init_arxiv_pages,
+                page_size=args.init_arxiv_page_size,
             )
         case _:
             raise ValueError(f"Unknown initializer: {args.init}")
