@@ -2,7 +2,8 @@
 arXiv DataSrc implementation.
 """
 
-from typing import Tuple
+import xml.etree.ElementTree as ET
+from typing import Tuple, AsyncIterator
 
 import feedparser
 
@@ -82,3 +83,31 @@ class ArxivDataSrc(CachedAsyncPool, DataSrc):
 
     async def get_papers_by_venue(self, venue: Venue) -> list[Paper]:
         raise NotImplementedError("arXiv DataSrc does not provide venue-to-papers lookup")
+
+    async def preload_search_cache(self, query: str) -> AsyncIterator[Paper]:
+        """Fetch a query page, split each entry into its own
+        single-entry XML, cache it under the id_list URL that _fetch_entry
+        would use, then yield the corresponding Paper."""
+        url = f"{ARXIV_QUERY_BASE}?{query}"
+        xml = await fetch_xml(url)
+        if xml is None:
+            raise ValueError(f"Failed to fetch arXiv search page: {url}")
+
+        ATOM_NS = "http://www.w3.org/2005/Atom"
+        root = ET.fromstring(xml)
+        entry_elems = root.findall(f"{{{ATOM_NS}}}entry")
+        for entry_elem in entry_elems:
+            root.remove(entry_elem)
+        for entry_elem in entry_elems:
+            id_elem = entry_elem.find(f"{{{ATOM_NS}}}id")
+            if id_elem is None or not id_elem.text:
+                continue
+            root.append(entry_elem)
+            single_xml = ET.tostring(root, encoding="unicode")
+            root.remove(entry_elem)
+            cache_key = f"{ARXIV_QUERY_BASE}?id_list={id_elem.text.strip()}"
+            await self._cache.set(cache_key, single_xml, self._cache_ttl)
+
+        entries = feedparser.parse(xml).entries
+        for entry in entries:
+            yield entry_to_paper(entry)
