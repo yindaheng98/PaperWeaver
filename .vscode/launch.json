@@ -154,7 +154,7 @@
                 "--datasrc-redis-url=redis://localhost:6379",
                 "--datadst-type=neo4j",
                 "--init=arxiv-query",
-                "--init-arxiv-queries",
+                "--init-arxiv-query",
                 "cat:cs.CV&sortBy=lastUpdatedDate",
                 "--init-arxiv-pages=2",
                 "--init-arxiv-page-size=10",

@@ -16,20 +16,19 @@ class ArxivPapersInitializer(PapersWeaverInitializerIface):
     so that subsequent get_paper_info calls hit cached data.
     """
 
-    def __init__(self, datasrc: ArxivDataSrc, queries: list[str], pages: int = 1, page_size: int = 10):
+    def __init__(self, datasrc: ArxivDataSrc, query: str, pages: int = 1, page_size: int = 10):
         self._datasrc = datasrc
-        self._queries = queries
+        self._query = query
         self._pages = pages
         self._page_size = page_size
 
     async def fetch_papers(self) -> AsyncIterator[Paper]:
-        for query in self._queries:
-            for page_idx in range(self._pages):
-                start = page_idx * self._page_size
-                query_str = f"search_query={query}&start={start}&max_results={self._page_size}"
-                count = 0
-                async for paper in self._datasrc.preload_search_cache(query_str):
-                    yield paper
-                    count += 1
-                if count < self._page_size:
-                    break
+        for page_idx in range(self._pages):
+            start = page_idx * self._page_size
+            query_str = f"search_query={self._query}&start={start}&max_results={self._page_size}"
+            count = 0
+            async for paper in self._datasrc.preload_search_cache(query_str):
+                yield paper
+                count += 1
+            if count < self._page_size:
+                break

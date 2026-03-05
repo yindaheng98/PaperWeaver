@@ -81,10 +81,10 @@ def add_initializer_args(parser: argparse.ArgumentParser) -> None:
 
     # arXiv specific
     parser.add_argument(
-        "--init-arxiv-queries",
-        nargs="+",
-        default=[],
-        help="arXiv search queries (e.g., 'all:machine learning' 'cat:cs.CV')"
+        "--init-arxiv-query",
+        type=str,
+        default="",
+        help="arXiv search query (e.g., 'all:machine learning' 'cat:cs.CV')"
     )
     parser.add_argument(
         "--init-arxiv-pages",
@@ -125,7 +125,7 @@ def create_initializer_from_args(args: argparse.Namespace) -> WeaverInitializerI
             datasrc = create_datasrc_from_args(args)
             return ArxivPapersInitializer(
                 datasrc=datasrc,
-                queries=list(args.init_arxiv_queries),
+                query=args.init_arxiv_query,
                 pages=args.init_arxiv_pages,
                 page_size=args.init_arxiv_page_size,
             )

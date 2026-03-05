@@ -191,7 +191,7 @@ class TestPreloadSearchCache:
         try:
             init = ArxivPapersInitializer(
                 datasrc=datasrc,
-                queries=["all:gaussianart"],
+                query="all:gaussianart",
                 pages=1,
                 page_size=3,
             )
@@ -216,7 +216,7 @@ class TestPreloadSearchCache:
         try:
             init = ArxivPapersInitializer(
                 datasrc=datasrc,
-                queries=["all:gaussianart"],
+                query="all:gaussianart",
                 pages=1,
                 page_size=3,
             )
