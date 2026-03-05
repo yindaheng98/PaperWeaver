@@ -5,6 +5,7 @@ Supports:
 - SemanticScholar: Semantic Scholar API
 - DBLP: DBLP API
 - CrossRef: CrossRef REST API
+- arXiv: arXiv XML API
 """
 
 import argparse
@@ -14,11 +15,12 @@ from .cache_impl import MemoryDataSrcCache, RedisDataSrcCache
 from .semanticscholar import SemanticScholarDataSrc
 from .dblp import DBLPDataSrc
 from .crossref import CrossRefDataSrc
+from .arxiv import ArxivDataSrc
 
 
 def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     """Add DataSrc-related command-line arguments."""
-    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp", "crossref"], default="dblp", help="DataSrc type (default: dblp)")
+    parser.add_argument("--datasrc-type", choices=["semanticscholar", "dblp", "crossref", "arxiv"], default="dblp", help="DataSrc type (default: dblp)")
 
     # DataSrc cache
     parser.add_argument("--datasrc-cache-mode", choices=["memory", "redis"], default="memory", help="DataSrc cache backend (default: memory)")
@@ -40,6 +42,9 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     # CrossRef specific
     parser.add_argument("--datasrc-crossref-cache-ttl", type=int, default=604800, help="CrossRef cache TTL in seconds (default: 604800 = 7 days)")
     parser.add_argument("--datasrc-crossref-mailto", help="Contact email for CrossRef polite pool (recommended for higher rate limits)")
+
+    # arXiv specific
+    parser.add_argument("--datasrc-arxiv-cache-ttl", type=int, help="arXiv cache TTL in seconds (default: None, permanent)")
 
 
 def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
@@ -79,6 +84,12 @@ def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
                 max_concurrent=args.datasrc_max_concurrent,
                 cache_ttl=args.datasrc_crossref_cache_ttl,
                 mailto=args.datasrc_crossref_mailto
+            )
+        case "arxiv":
+            return ArxivDataSrc(
+                cache=cache,
+                max_concurrent=args.datasrc_max_concurrent,
+                cache_ttl=args.datasrc_arxiv_cache_ttl
             )
         case _:
             raise ValueError(f"Unknown datasrc type: {args.datasrc_type}")
