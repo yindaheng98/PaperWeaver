@@ -44,7 +44,7 @@ def add_datasrc_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--datasrc-crossref-mailto", help="Contact email for CrossRef polite pool (recommended for higher rate limits)")
 
     # arXiv specific
-    parser.add_argument("--datasrc-arxiv-cache-ttl", type=int, help="arXiv cache TTL in seconds (default: None, permanent)")
+    parser.add_argument("--datasrc-arxiv-cache-ttl", type=int, default=604800, help="arXiv cache TTL in seconds (default: 604800 = 7 days, arxiv papers may be updated)")
 
 
 def create_datasrc_from_args(args: argparse.Namespace) -> DataSrc:
