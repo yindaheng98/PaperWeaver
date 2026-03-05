@@ -42,11 +42,27 @@ def paper_to_arxiv_id(paper: Paper) -> str | None:
     """
     Extract arXiv ID from paper identifiers.
     """
+    candidates_with_version: list[str] = []
+    candidates_without_version: list[str] = []
+
     for ident in paper.identifiers:
         if ident.startswith(ARXIV_ABS_PREFIX):
-            return ident[len(ARXIV_ABS_PREFIX):]
+            arxiv_id = ident[len(ARXIV_ABS_PREFIX):]
+            if strip_arxiv_version(arxiv_id) != arxiv_id:
+                candidates_with_version.append(arxiv_id)
+            else:
+                candidates_without_version.append(arxiv_id)
         if ident.startswith(f"{DOI_URL_PREFIX}{ARXIV_DOI_PREFIX}"):
-            return ident[len(f"{DOI_URL_PREFIX}{ARXIV_DOI_PREFIX}"):]
+            arxiv_id = ident[len(f"{DOI_URL_PREFIX}{ARXIV_DOI_PREFIX}"):]
+            if strip_arxiv_version(arxiv_id) != arxiv_id:
+                candidates_with_version.append(arxiv_id)
+            else:
+                candidates_without_version.append(arxiv_id)
+
+    if candidates_with_version:
+        return candidates_with_version[0]
+    if candidates_without_version:
+        return candidates_without_version[0]
     return None
 
 
