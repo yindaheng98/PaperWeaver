@@ -81,7 +81,6 @@ def entry_to_paper(entry: dict) -> Paper:
             if pdf_id.endswith(".pdf"):
                 pdf_id = pdf_id[:-4]
             pdf_id = strip_arxiv_version(pdf_id)
-            identifiers.add(f"{ARXIV_PDF_PREFIX}{pdf_id}.pdf")
             identifiers.add(f"{ARXIV_PDF_PREFIX}{pdf_id}")
 
     return Paper(identifiers=identifiers)

@@ -94,6 +94,9 @@ class ArxivDataSrc(CachedAsyncPool, DataSrc):
             raise ValueError(f"Failed to fetch arXiv search page: {url}")
 
         ATOM_NS = "http://www.w3.org/2005/Atom"
+        ET.register_namespace("", ATOM_NS)
+        ET.register_namespace("arxiv", "http://arxiv.org/schemas/atom")
+        ET.register_namespace("opensearch", "http://a9.com/-/spec/opensearch/1.1/")
         root = ET.fromstring(xml)
         entry_elems = root.findall(f"{{{ATOM_NS}}}entry")
         for entry_elem in entry_elems:

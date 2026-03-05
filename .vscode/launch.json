@@ -75,6 +75,16 @@
             ]
         },
         {
+            "name": "pytest arxiv datasrc",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/datasrc/arxiv",
+                "-v"
+            ]
+        },
+        {
             "name": "pytest neo4j datadst",
             "type": "debugpy",
             "request": "launch",
@@ -126,6 +136,28 @@
                 "--datasrc-max-concurrent=2",
                 "--init-crossref-neo4j-patterns",
                 "MATCH (paper:Paper)-[:HAS_ID]->(id:PaperIdentifier) WHERE id.value STARTS WITH 'dblp:url:db/conf/cvpr'",
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "run arxiv",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "paper_weaver",
+            "args": [
+                "-v",
+                "--weaver-type=p-only",
+                "--cache-mode=redis",
+                "--cache-redis-url=redis://localhost:6379",
+                "--datasrc-type=arxiv",
+                "--datasrc-cache-mode=redis",
+                "--datasrc-redis-url=redis://localhost:6379",
+                "--datadst-type=neo4j",
+                "--init=arxiv-query",
+                "--init-arxiv-queries",
+                "cat:cs.CV",
+                "--init-arxiv-pages=2",
+                "--init-arxiv-page-size=10",
             ],
             "justMyCode": false
         },
