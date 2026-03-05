@@ -155,7 +155,7 @@
                 "--datadst-type=neo4j",
                 "--init=arxiv-query",
                 "--init-arxiv-queries",
-                "cat:cs.CV",
+                "cat:cs.CV&sortBy=lastUpdatedDate",
                 "--init-arxiv-pages=2",
                 "--init-arxiv-page-size=10",
             ],

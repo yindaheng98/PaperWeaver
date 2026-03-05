@@ -108,7 +108,10 @@ class ArxivDataSrc(CachedAsyncPool, DataSrc):
             root.append(entry_elem)
             single_xml = ET.tostring(root, encoding="unicode")
             root.remove(entry_elem)
-            cache_key = f"{ARXIV_QUERY_BASE}?id_list={id_elem.text.strip()}"
+            arxiv_id = paper_to_arxiv_id(entry_to_paper(feedparser.parse(single_xml).entries[0]))
+            if arxiv_id is None:
+                continue
+            cache_key = f"{ARXIV_QUERY_BASE}?id_list={arxiv_id}"
             await self._cache.set(cache_key, single_xml, self._cache_ttl)
 
         entries = feedparser.parse(xml).entries

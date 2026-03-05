@@ -3,7 +3,6 @@ arXiv query-based initializer.
 """
 
 from typing import AsyncIterator
-from urllib.parse import quote_plus
 
 from ...dataclass import Paper
 from ...iface_init import PapersWeaverInitializerIface
@@ -25,10 +24,9 @@ class ArxivPapersInitializer(PapersWeaverInitializerIface):
 
     async def fetch_papers(self) -> AsyncIterator[Paper]:
         for query in self._queries:
-            encoded = quote_plus(query)
             for page_idx in range(self._pages):
                 start = page_idx * self._page_size
-                query_str = f"search_query={encoded}&start={start}&max_results={self._page_size}"
+                query_str = f"search_query={query}&start={start}&max_results={self._page_size}"
                 count = 0
                 async for paper in self._datasrc.preload_search_cache(query_str):
                     yield paper
