@@ -218,8 +218,7 @@ async def _transfer_relationships_and_delete(
         MATCH (other:{label}) WHERE elementId(other) IN $other_ids
         MATCH (source)-[r]->(other)
         WHERE source <> n AND type(r) <> 'HAS_ID'
-        CALL {{
-            WITH source, r, n
+        CALL (source, r, n) {{
             WITH source, type(r) as rel_type, properties(r) as rel_props, n
             CALL apoc.create.relationship(source, rel_type, rel_props, n) YIELD rel
             RETURN rel
@@ -233,8 +232,7 @@ async def _transfer_relationships_and_delete(
         MATCH (other:{label}) WHERE elementId(other) IN $other_ids
         MATCH (other)-[r]->(target)
         WHERE target <> n AND type(r) <> 'HAS_ID'
-        CALL {{
-            WITH n, r, target
+        CALL (n, r, target) {{
             WITH n, type(r) as rel_type, properties(r) as rel_props, target
             CALL apoc.create.relationship(n, rel_type, rel_props, target) YIELD rel
             RETURN rel
